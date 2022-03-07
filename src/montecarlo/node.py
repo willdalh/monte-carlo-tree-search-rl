@@ -2,7 +2,7 @@
 import numpy as np
 
 class Node:
-    def __init__(self, parent, origin_action, state):
+    def __init__(self, parent, origin_action, state, c):
         self.parent = parent
         self.origin_action = origin_action
         self.state = state
@@ -14,7 +14,7 @@ class Node:
         self.Ns = []
         self.Es = []
 
-        self.c = 0.4
+        self.c = c
 
     def add_child(self, child):
         self.children.append(child)

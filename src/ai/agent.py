@@ -1,5 +1,7 @@
 import torch
+import torch.nn.functional as F
 import numpy as np
+import matplotlib.pyplot as plt
 
 from statemanagers.state_manager import StateManager
 
@@ -12,34 +14,50 @@ class Agent:
         self.buffer = ReplayBuffer(buffer_size)
         self.anet = Model(nn_dim=nn_dim, optimizer_name=optimizer, lr=lr)
 
-        self.epsilon = 0.9
+        self.epsilon = 1.0
         self.epsilon_decay = epsilon_decay
+        self.mse_losses = []
+        self.cross_losses = []
 
-    def train_on_buffer_batch(self):
+    def train_on_buffer_batch(self, sm: StateManager, debug=False):
         minibatch = self.buffer.sample(self.batch_size)
-        states = torch.Tensor([state for state, dist in minibatch])
+        states = torch.Tensor([state for state, dist in minibatch]) #TODO: legal moves fix
         target = torch.Tensor(np.array([dist for state, dist in minibatch]))
         prediction = self.anet(states)
+        if debug:
+            print('\n')
+            print(f'state: {states[0]}')
+            print(f'pred: {prediction[0]}')
+            print(f'tar: {target[0]}')
         loss = self.anet.loss_fn(prediction, target)
         loss.backward()
         self.anet.optimizer.step()
         self.anet.optimizer.zero_grad()
 
+        if self.epsilon > 0.01:
+            self.epsilon *= self.epsilon_decay
+        
+        self.cross_losses.append(loss.item())
+        with torch.no_grad():
+            self.mse_losses.append(F.mse_loss(prediction, target).item())
+
     def store_case(self, case):
         self.buffer.store_case(case)
 
-    def choose_action(self, state, legal_moves=None):
+    def choose_action(self, state, legal_moves=None, debug=False):
         action = None
         if np.random.random() > self.epsilon: # exploit
-            dist = self.anet(torch.Tensor([state]))
+            dist = self.anet.forward(torch.Tensor([state]))[0]
+            for i in range(dist.shape[0]):
+                if i not in legal_moves:
+                    dist[i] = 0
+            dist *= 1/dist.sum()
+            if debug:
+                print('dist:', dist)
             action = torch.argmax(dist).item()
-            if action not in legal_moves:
-                action = np.random.choice(legal_moves)
         else: # explore
             action = np.random.choice(legal_moves)
 
-        if self.epsilon > 0.01:
-            self.epsilon *= self.epsilon_decay
         return action
 
     def rollout(self, sm: StateManager, leaf):
@@ -51,7 +69,15 @@ class Agent:
         winner = sm.get_winner(state)
         Z = 1 if winner == 1 else -1 # Evaluation of final state
         return Z
+    
+    def load_model(self, path):
+        self.anet.load_model(path)
 
+    def present_results(self):
+        print('\nLength of buffer:', len(self.buffer.buffer))
+        plt.plot(np.arange(len(self.mse_losses)), np.array(self.mse_losses))
+        # plt.plot(np.arange(len(self.cross_losses)), np.array(self.cross_losses))
+        plt.show()
 
 
 #%%

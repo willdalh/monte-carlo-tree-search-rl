@@ -8,6 +8,7 @@ class NIMStateManager(StateManager):
 
     def get_initial_state(self):
         player_turn = np.random.randint(1, 3)
+        # player_turn = 1
         return [player_turn, self.N]
 
     def get_successor_states(self, state, return_moves=False):
@@ -25,13 +26,13 @@ class NIMStateManager(StateManager):
         curr_player = state[0]
         curr_n = state[1]
         curr_n -= a + 1 # Because a is the action index, and choosing index 0 you pick 1 stone
-        curr_player = 2 if curr_player == 1 else 1
-        return [curr_player, curr_n]
+        next_player = 2 if curr_player == 1 else 1
+        return [next_player, curr_n]
 
     def is_final(self, state):
         return state[1] == 0
     
-    def get_winner(self, state):
+    def get_winner(self, state): # Assumes state input is final
         curr_player = state[0]
         winner = 2 if curr_player == 1 else 1 # Winner is not the current player
         return winner

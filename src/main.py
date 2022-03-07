@@ -3,10 +3,13 @@ import os
 import shutil
 import json
 import importlib
+import glob
 
 from montecarlo.monte_carlo_tree import MonteCarloTree
 from ai.agent import Agent
 from run_training import run_training
+
+from topp.topp import TOPP
 
 
 # Temporary
@@ -15,8 +18,6 @@ import torch
 import torch.nn.functional as F
 
 def main(args):
-    print(args)
-    
     if not args.run_topp:
         # Set up logging directory
         if not os.path.isdir('../logs'):
@@ -42,16 +43,28 @@ def main(args):
         kwargs = vars(args)
 
         agent = Agent(**kwargs)
-        mct = MonteCarloTree(sm.get_action_space())
+        mct = MonteCarloTree(**kwargs, action_space=sm.get_action_space())
 
         run_training(args, sm, mct, agent)
     
     else:
+        saved_args = argparse.Namespace()
         with open(f'{ns_args.saved_dir}/args.json', 'r') as f:
-            saved_args = json.load(f)
-            nn_dim = saved_args['nn_dim']
-            print(nn_dim)
+            saved_args.__dict__ = json.load(f)
         
+        sm_file_name = '%s_state_manager' % saved_args.game.lower()
+        sm_class_name = '%sStateManager' % saved_args.game
+        state_manager = importlib.import_module('statemanagers.%s'%sm_file_name).__dict__[sm_class_name]
+        sm = state_manager(**vars(saved_args))
+
+        saved_args.nn_dim.insert(0, sm.get_state_space_size())
+        saved_args.nn_dim.append(sm.get_action_space_size())
+
+        model_paths = glob.glob(f'{args.saved_dir}/models/anet*.pt')
+        model_paths = sorted(model_paths, key=lambda x: int(x.split('_')[-1][:-3]))
+
+        topp = TOPP(model_paths, sm, nn_dim=saved_args.nn_dim)
+
 
 # [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]
 
@@ -71,7 +84,7 @@ if __name__ == '__main__':
 
     # Logging and saving
     parser.add_argument('--log_dir', type=str, default='train_log_test', help='The folder name to save logs and instances of ANETs')
-    parser.add_argument('--num_anet_saves', type=int, default=5, help='Number of times to save the ANET during the runs')
+    parser.add_argument('--num_anet_saves', type=int, default=10, help='Number of times to save the ANET during the runs')
 
     # State managers
     parser.add_argument('--game', type=str, default='NIM', help='The game to train/play on')
@@ -80,19 +93,21 @@ if __name__ == '__main__':
     parser.add_argument('--hex_k', type=int, default=3, help='The size of the k x k Hex board')
 
     # NIM
-    parser.add_argument('--nim_n', type=int, default=10, help='The number of pieces the NIM-board starts with')
-    parser.add_argument('--nim_k', type=int, default=3, help='The maximum number of pieces a player can remove each round')
+    parser.add_argument('--nim_n', type=int, default=8, help='The number of pieces the NIM-board starts with')
+    parser.add_argument('--nim_k', type=int, default=2, help='The maximum number of pieces a player can remove each round')
     
     # MCTS parameters
-    parser.add_argument('--search_games', type=int, default=50, help='The number of search games to be simulated for each root state')
+    parser.add_argument('--search_games', type=int, default=400, help='The number of search games to be simulated for each root state')
+    parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
+    parser.add_argument('--c', type=float, default=0.9, help='Exploration constant for the tree policy')
 
     # ANET and Agent parameters
     parser.add_argument('--buffer_size', type=int, default=5000, help='The maximum size of the replay buffer')
-    parser.add_argument('--batch_size', type=int, default=64, help='The size of the batch the agent uses to train on')
-    parser.add_argument('--lr', type=float, default=0.01, help='The learning rate for the ANET')
-    parser.add_argument('--nn_dim', type=str_to_list, default='128,64,10,relu', help='The structure of the neural network, excluding the state space size at the start and the action space size at the end')
+    parser.add_argument('--batch_size', type=int, default=16, help='The size of the batch the agent uses to train on')
+    parser.add_argument('--lr', type=float, default=0.001, help='The learning rate for the ANET')
+    parser.add_argument('--nn_dim', type=str_to_list, default='64,relu,32,relu', help='The structure of the neural network, excluding the state space size at the start and the action space size at the end')
     parser.add_argument('--optimizer', type=str, default='adam', help='The optimizer used by the neural network to perform gradient descent')
-    parser.add_argument('--epsilon_decay', type=float, default=0.9999)
+    parser.add_argument('--epsilon_decay', type=float, default=0.99, help='The value to decay epsilon by for every action taken')
 
     # TOPP
     parser.add_argument('--run_topp', type=str_to_bool, default=False, help='Whether or not to run TOPP')
@@ -107,4 +122,16 @@ if __name__ == '__main__':
     ns_args.log_dir = f'../logs/{ns_args.log_dir}'
     ns_args.saved_dir = f'../logs/{ns_args.saved_dir}'
 
+    print(f'Arguments:\n{ns_args}\n')
+
     main(ns_args)
+
+    '''
+    NIM:
+
+    python main.py --episodes 400 --nn_dim 32,relu,16,relu --epsilon_decay 0.999 --lr 0.001 --batch_size 64
+    
+    python main.py --episodes 500 --batch_size 64 --lr 0.013 --epsilon_decay 0.9999
+    python main.py --episodes 500 --batch_size 64 --lr 0.0013 --epsilon_decay 0.9999
+    python main.py --episodes 350 --batch_size 64 --search_games 1000 --lr 0.002 --epsilon_decay 0.9999
+    '''

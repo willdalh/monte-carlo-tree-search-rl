@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 import torch.optim as optim
 from collections import OrderedDict
@@ -22,6 +23,7 @@ class Model(nn.Module):
         self.optimizer = None
         self.initialize_optimizer(optimizer_name)
         self.loss_fn = nn.CrossEntropyLoss()
+        # self.loss_fn = nn.MSELoss()
         
 
     def forward(self, x):
@@ -102,7 +104,9 @@ class Model(nn.Module):
                 # Initialize activation functions and store them at the correct place in the list
                 layers.insert(i-1, (f'{act_func}{i-1}', Model.get_activation_function(act_func)))
                 layers_test.insert(i-1, e)
-        # print(layers)
+        layers.append(('softmax_end', nn.Softmax(dim=1)))
+        layers_test.append('softmax')
+        print('nn_dim interpreted as:', layers_test, '\n')
 
         return layers
 
