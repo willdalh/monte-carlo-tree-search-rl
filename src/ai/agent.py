@@ -19,9 +19,11 @@ class Agent:
         self.mse_losses = []
         self.cross_losses = []
 
+        self.index = -1
+
     def train_on_buffer_batch(self, sm: StateManager, debug=False):
         minibatch = self.buffer.sample(self.batch_size)
-        states = torch.Tensor([state for state, dist in minibatch]) #TODO: legal moves fix
+        states = torch.Tensor([state for state, dist in minibatch])
         target = torch.Tensor(np.array([dist for state, dist in minibatch]))
         prediction = self.anet(states)
         if debug:
@@ -38,8 +40,8 @@ class Agent:
             self.epsilon *= self.epsilon_decay
         
         self.cross_losses.append(loss.item())
-        with torch.no_grad():
-            self.mse_losses.append(F.mse_loss(prediction, target).item())
+        # with torch.no_grad():
+            # self.mse_losses.append(F.mse_loss(prediction, target).item())
 
     def store_case(self, case):
         self.buffer.store_case(case)
@@ -75,8 +77,8 @@ class Agent:
 
     def present_results(self):
         print('\nLength of buffer:', len(self.buffer.buffer))
-        plt.plot(np.arange(len(self.mse_losses)), np.array(self.mse_losses))
-        # plt.plot(np.arange(len(self.cross_losses)), np.array(self.cross_losses))
+        # plt.plot(np.arange(len(self.mse_losses)), np.array(self.mse_losses))
+        plt.plot(np.arange(len(self.cross_losses)), np.array(self.cross_losses))
         plt.show()
 
 

@@ -12,7 +12,6 @@ class NIMStateManager(StateManager):
         return [player_turn, self.N]
 
     def get_successor_states(self, state, return_moves=False):
-        curr_n = state[1]
         legal_moves = self.get_legal_moves(state)
         successors = []
         for a in legal_moves:

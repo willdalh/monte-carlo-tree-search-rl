@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+import time
 
 from ai.agent import Agent
 from statemanagers.state_manager import StateManager
@@ -11,12 +12,13 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     NUM_EPISODES = args.episodes
     NUM_SEARCH_GAMES = args.search_games
     NUM_ANET_SAVES = args.num_anet_saves
-
+    tic = time.time()
     wins = []
     for e in range(NUM_EPISODES):
         state = sm.get_initial_state()
 
         mct.set_root(state)
+        # mct.expand_node(mct.root, sm)
 
         while not sm.is_final(state):
             # Initialize monte carlo game board to same state as root
@@ -33,15 +35,20 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                 mct.backpropagate(leaf, Z)
 
             D = mct.get_visit_distribution()
-            # if state == [1, 3]:
-            #     print('\n')
-            #     print('state:', state)
-            #     print('Qs:', mct.root.get_Qs())
-            #     print('dist:', D)
+            if (state == [1, 2] or state == [2, 2] or state == [1, 3] or state == [2, 3]) and False:
+                print('\n')
+                print('state:', state)
+                print('Qs:', mct.root.get_Qs())
+                print('Ns:', mct.root.Ns)
+                print('dist:', D)
             # print('\n', state)
             # print('Qs', mct.root.get_Qs())
             # print('us', mct.root.get_us())
             # print('N', mct.root.N)
+            
+            # mct.visualize()
+            # quit()
+            
             agent.store_case((state, D))
             action = np.argmax(D)
             
@@ -74,6 +81,9 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             # Save ANET parameters
 
         # [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]
+
+    toc = time.time()
+    print(f'Time used for training: {toc-tic} seconds')
     # Verification
     agent.present_results()
     agent.epsilon = 0

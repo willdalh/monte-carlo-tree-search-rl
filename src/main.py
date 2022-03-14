@@ -59,11 +59,15 @@ def main(args):
 
         saved_args.nn_dim.insert(0, sm.get_state_space_size())
         saved_args.nn_dim.append(sm.get_action_space_size())
-
+  
         model_paths = glob.glob(f'{args.saved_dir}/models/anet*.pt')
         model_paths = sorted(model_paths, key=lambda x: int(x.split('_')[-1][:-3]))
+        if len(model_paths) == 0:
+            raise FileNotFoundError('No saved ANETs found in the specified directory')
 
         topp = TOPP(model_paths, sm, nn_dim=saved_args.nn_dim)
+        topp.run()
+        topp.present_results()
 
 
 # [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]

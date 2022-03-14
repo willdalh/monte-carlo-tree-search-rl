@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 from .node import Node
 from statemanagers.state_manager import StateManager
+import graphviz
 
 class MonteCarloTree:
     def __init__(self, max_depth, c, action_space, **_):
@@ -28,15 +29,17 @@ class MonteCarloTree:
         if depth == 0 or sm.is_final(parent.state):
             return
 
-        # TODO perform check whether parent is final. Then no children exists. EDIT: Happens automatically
+        # TODO perform check whether parent is final. Then no children exists. EDIT: Think it happens automatically, check
         if len(parent.children) == 0: # Refer to statemanager to generate children states
-            children_states, moves = sm.get_successor_states(parent.state, return_moves=True)
-            for state, move in zip(children_states, moves):
-                parent.add_child(Node(parent=parent, origin_action=move, state=state, c=self.c))
+            self.expand_node(parent=parent, sm=sm)
         
         for child in parent.children:
             self._expand(sm, depth - 1, child)
 
+    def expand_node(self, parent: Node, sm: StateManager):
+        children_states, moves = sm.get_successor_states(parent.state, return_moves=True)
+        for state, move in zip(children_states, moves):
+            parent.add_child(Node(parent=parent, origin_action=move, state=state, c=self.c))
 
     def tree_search(self):
         # Find a leaf node and return it so the ANET can perform rollout on it 
@@ -52,7 +55,19 @@ class MonteCarloTree:
             elif curr_player == 2:
                 child_selected_index = np.argmin([q - u for q, u in zip(Qs, us)])
             curr_node = curr_node.children[child_selected_index]
+
+        # Added to fit with the video of John Levine
+        # if curr_node.N == 0:
+        #     return curr_node
+        # else:
+        #     self.expand_node(curr_node, sm)
+        #     if len(curr_node.children) == 0:
+        #         return curr_node
+        #     return curr_node.children[0]
+
         return curr_node
+
+        
 
 
     def backpropagate(self, leaf, Z):
@@ -75,4 +90,22 @@ class MonteCarloTree:
         for i, move in enumerate(moves):
             final_dist[move] = dist[i]
         return final_dist
+
+
+    def visualize(self):
+        vis_tree = graphviz.Graph(name='Monte Carlo Tree', filename='monte_carlo_tree.dt')
+        self.visualize_node(vis_tree, self.root, parent_node_name=None, edge_label=None, add_text=None)
+        vis_tree.render(view=True)
+    
+    def visualize_node(self, vis_tree, node, parent_node_name, edge_label, add_text):
+        name= f'node_{np.random.rand()}'
+        label = f'{node.state}'
+        if add_text != None:
+            label = f'{label}\n{add_text}'
+        vis_tree.node(name=name, label=label)
+        if parent_node_name != None:
+            vis_tree.edge(tail_name=parent_node_name, head_name=name, label=edge_label)
+        
+        for child, n, q in zip(node.children, node.Ns, node.get_Qs()):
+            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action + 1}', add_text=f'{n}\n{q: 0.3f}')
         
