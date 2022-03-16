@@ -46,7 +46,7 @@ class NIMStateManager(StateManager):
     def get_action_space_size(self):
         return len(self.get_action_space())
 
-    def get_state_space_size(self):
+    def get_state_size(self):
         return 2
     
 

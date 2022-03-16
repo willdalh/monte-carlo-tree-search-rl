@@ -27,6 +27,9 @@ class Model(nn.Module):
         
 
     def forward(self, x):
+        return F.softmax(self.net(x.float()), dim=1)
+
+    def logits(self, x):
         return self.net(x.float())
 
     def initialize_optimizer(self, optimizer_name):
@@ -104,8 +107,8 @@ class Model(nn.Module):
                 # Initialize activation functions and store them at the correct place in the list
                 layers.insert(i-1, (f'{act_func}{i-1}', Model.get_activation_function(act_func)))
                 layers_test.insert(i-1, e)
-        layers.append(('softmax_end', nn.Softmax(dim=1)))
-        layers_test.append('softmax')
+        # layers.append(('softmax_end', nn.Softmax(dim=1)))
+        # layers_test.append('softmax')
         print('nn_dim interpreted as:', layers_test, '\n')
 
         return layers

@@ -8,6 +8,8 @@ from statemanagers.state_manager import StateManager
 from .model import Model
 from .replay_buffer import ReplayBuffer
 
+import time
+
 class Agent:
     def __init__(self, buffer_size, batch_size, lr, nn_dim, optimizer, epsilon_decay, **_):
         self.batch_size = batch_size
@@ -25,16 +27,18 @@ class Agent:
         minibatch = self.buffer.sample(self.batch_size)
         states = torch.Tensor([state for state, dist in minibatch])
         target = torch.Tensor(np.array([dist for state, dist in minibatch]))
-        prediction = self.anet(states)
-        if debug:
-            print('\n')
-            print(f'state: {states[0]}')
-            print(f'pred: {prediction[0]}')
-            print(f'tar: {target[0]}')
+        prediction = self.anet.logits(states)
+
         loss = self.anet.loss_fn(prediction, target)
         loss.backward()
         self.anet.optimizer.step()
         self.anet.optimizer.zero_grad()
+
+        if debug:
+            print('\n')
+            print(f'state: {states[0]}')
+            print(f'pred dist: {F.softmax(prediction[0], dim=0)}')
+            print(f'tar: {target[0]}')
 
         if self.epsilon > 0.01:
             self.epsilon *= self.epsilon_decay

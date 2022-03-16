@@ -25,6 +25,10 @@ class Node:
         return [e / n if n != 0 else 0 for e, n in zip(self.Es, self.Ns)]
 
     def get_us(self):
-        return [self.c * np.sqrt((np.log(self.N))/(1 + self.Ns[i])) for i in range(len(self.Ns))]
+        if self.N == 0:
+            return [0 for i in range(len(self.children))]
+            
+        res = [self.c * np.sqrt((np.log(self.N))/(1 + self.Ns[i])) for i in range(len(self.Ns))]
+        return res
         
 

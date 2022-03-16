@@ -13,26 +13,26 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     NUM_SEARCH_GAMES = args.search_games
     NUM_ANET_SAVES = args.num_anet_saves
     tic = time.time()
-    wins = []
-    for e in range(NUM_EPISODES):
+
+    # Store one instance of the ANET prior to training
+    agent.anet.save_model(f'{args.log_dir}/models', f'anet_{0}.pt')
+
+    for e in range(NUM_EPISODES + 1):
         state = sm.get_initial_state()
 
         mct.set_root(state)
-        # mct.expand_node(mct.root, sm)
+        mct.expand_node(mct.root, sm)
 
         while not sm.is_final(state):
             # Initialize monte carlo game board to same state as root
-            # print('Expanding nodes')
-            # print('State is', mct.root.state)
-            # print('Is final', sm.is_final())
-
-            mct.expand_to_depth(sm)
+            # mct.expand_to_depth(sm)
 
             for g in range(NUM_SEARCH_GAMES):
                 # Tree policy
-                leaf = mct.tree_search()
+                leaf = mct.tree_search_expand(sm)
                 Z = agent.rollout(sm, leaf)
                 mct.backpropagate(leaf, Z)
+                # mct.visualize()
 
             D = mct.get_visit_distribution()
             if (state == [1, 2] or state == [2, 2] or state == [1, 3] or state == [2, 3]) and False:
@@ -47,7 +47,8 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             # print('N', mct.root.N)
             
             # mct.visualize()
-            # quit()
+            # if state[1] != 8:
+            #     quit()
             
             agent.store_case((state, D))
             action = np.argmax(D)
@@ -69,21 +70,27 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             # set root = s*
         
         # Train ANET on a random minibatch of cases from ReplayBuffer
-        agent.train_on_buffer_batch(sm, debug=e>int((NUM_EPISODES*9.5)/10))
+        agent.train_on_buffer_batch(sm, debug=NUM_EPISODES - e < 30)
         winner = sm.get_winner(state)
-        wins.append(1 if winner == 1 else 0)
+        
         # print('End of episode')
         if e%(int(NUM_EPISODES/20)) == 0:
             print(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon}')
 
-        if e%(int(NUM_EPISODES/(NUM_ANET_SAVES - 1))) == 0 or e == NUM_EPISODES - 1:
+        if e%(int(NUM_EPISODES/(NUM_ANET_SAVES - 1))) == 0 and e != 0:
             agent.anet.save_model(f'{args.log_dir}/models', f'anet_{e}.pt')
             # Save ANET parameters
 
         # [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]
 
+
+
+
+
+
     toc = time.time()
     print(f'Time used for training: {toc-tic} seconds')
+
     # Verification
     agent.present_results()
     agent.epsilon = 0
@@ -98,6 +105,9 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                 action = np.random.choice(sm.get_legal_moves(state))
             state = sm.get_successor(state, action)
     
+
+    print('Replay buffer contents:')
+    agent.buffer.print_histogram()
     # print('Dist for [1, 3]', output)
     # plt.plot(np.arange(len(wins)), wins)
     # plt.show()

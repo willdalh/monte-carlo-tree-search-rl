@@ -37,7 +37,7 @@ def main(args):
         state_manager = importlib.import_module('statemanagers.%s'%sm_file_name).__dict__[sm_class_name]
         sm = state_manager(**vars(args))
 
-        args.nn_dim.insert(0, sm.get_state_space_size())
+        args.nn_dim.insert(0, sm.get_state_size())
         args.nn_dim.append(sm.get_action_space_size())
 
         kwargs = vars(args)
@@ -57,7 +57,7 @@ def main(args):
         state_manager = importlib.import_module('statemanagers.%s'%sm_file_name).__dict__[sm_class_name]
         sm = state_manager(**vars(saved_args))
 
-        saved_args.nn_dim.insert(0, sm.get_state_space_size())
+        saved_args.nn_dim.insert(0, sm.get_state_size())
         saved_args.nn_dim.append(sm.get_action_space_size())
   
         model_paths = glob.glob(f'{args.saved_dir}/models/anet*.pt')
@@ -103,13 +103,13 @@ if __name__ == '__main__':
     # MCTS parameters
     parser.add_argument('--search_games', type=int, default=400, help='The number of search games to be simulated for each root state')
     parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
-    parser.add_argument('--c', type=float, default=0.9, help='Exploration constant for the tree policy')
+    parser.add_argument('--c', type=float, default=1.0, help='Exploration constant for the tree policy')
 
     # ANET and Agent parameters
-    parser.add_argument('--buffer_size', type=int, default=5000, help='The maximum size of the replay buffer')
-    parser.add_argument('--batch_size', type=int, default=16, help='The size of the batch the agent uses to train on')
+    parser.add_argument('--buffer_size', type=int, default=500000, help='The maximum size of the replay buffer')
+    parser.add_argument('--batch_size', type=int, default=64, help='The size of the batch the agent uses to train on')
     parser.add_argument('--lr', type=float, default=0.001, help='The learning rate for the ANET')
-    parser.add_argument('--nn_dim', type=str_to_list, default='64,relu,32,relu', help='The structure of the neural network, excluding the state space size at the start and the action space size at the end')
+    parser.add_argument('--nn_dim', type=str_to_list, default='128,relu,64,relu', help='The structure of the neural network, excluding the state space size at the start and the action space size at the end')
     parser.add_argument('--optimizer', type=str, default='adam', help='The optimizer used by the neural network to perform gradient descent')
     parser.add_argument('--epsilon_decay', type=float, default=0.99, help='The value to decay epsilon by for every action taken')
 
@@ -138,4 +138,9 @@ if __name__ == '__main__':
     python main.py --episodes 500 --batch_size 64 --lr 0.013 --epsilon_decay 0.9999
     python main.py --episodes 500 --batch_size 64 --lr 0.0013 --epsilon_decay 0.9999
     python main.py --episodes 350 --batch_size 64 --search_games 1000 --lr 0.002 --epsilon_decay 0.9999
+
+
+    python main.py --episodes 400 --lr 0.00001 --epsilon_decay 0.99999
+
+    python main.py --episodes 600 --lr 0.005 --epsilon_decay 0.99 --nim_k 3 --nim_n 9
     '''

@@ -12,6 +12,8 @@ class MonteCarloTree:
         self.c = c
 
         self.root = None
+
+        self.vis_counter = 0
     
     def set_root(self, state):
         if isinstance(state, Node):
@@ -40,6 +42,7 @@ class MonteCarloTree:
         children_states, moves = sm.get_successor_states(parent.state, return_moves=True)
         for state, move in zip(children_states, moves):
             parent.add_child(Node(parent=parent, origin_action=move, state=state, c=self.c))
+        return len(children_states) > 0
 
     def tree_search(self):
         # Find a leaf node and return it so the ANET can perform rollout on it 
@@ -48,7 +51,20 @@ class MonteCarloTree:
             Qs = curr_node.get_Qs()
             us = curr_node.get_us()
             curr_player = curr_node.state[0]
+            # if np.any([np.isnan(u) for u in us]):
+            #     print('\n')
+            #     print(us)
+            #     print(curr_node.state)
+            #     if curr_player == 1:
+            #         print([q + u for q, u in zip(Qs, us)])
+            #         print(np.argmax([q + u for q, u in zip(Qs, us)]))
+            #     elif curr_player == 2:
+            #         [q - u for q, u in zip(Qs, us)]
+            #         print(np.argmin([q - u for q, u in zip(Qs, us)]))
+                # self.visualize()
+                # quit()
             
+
             child_selected_index = None
             if curr_player == 1:
                 child_selected_index = np.argmax([q + u for q, u in zip(Qs, us)])
@@ -56,18 +72,31 @@ class MonteCarloTree:
                 child_selected_index = np.argmin([q - u for q, u in zip(Qs, us)])
             curr_node = curr_node.children[child_selected_index]
 
-        # Added to fit with the video of John Levine
-        # if curr_node.N == 0:
-        #     return curr_node
-        # else:
-        #     self.expand_node(curr_node, sm)
-        #     if len(curr_node.children) == 0:
-        #         return curr_node
-        #     return curr_node.children[0]
-
         return curr_node
 
+    def tree_search_expand(self, sm: StateManager):
+        '''Tree traversal as shown by John Levine on YouTube'''
+        curr_node = self.root
+        while len(curr_node.children) != 0:
+            Qs = curr_node.get_Qs()
+            us = curr_node.get_us()
+            curr_player = curr_node.state[0]
+
+            child_selected_index = None
+            if curr_player == 1:
+                child_selected_index = np.argmax([q + u for q, u in zip(Qs, us)])
+            elif curr_player == 2:
+                child_selected_index = np.argmin([q - u for q, u in zip(Qs, us)])
+            curr_node = curr_node.children[child_selected_index]
         
+        if curr_node.N == 0:
+            return curr_node
+        else:
+            expanded = self.expand_node(curr_node, sm)
+            if not expanded:
+                return curr_node
+            return curr_node.children[0]
+
 
 
     def backpropagate(self, leaf, Z):
@@ -93,8 +122,9 @@ class MonteCarloTree:
 
 
     def visualize(self):
-        vis_tree = graphviz.Graph(name='Monte Carlo Tree', filename='monte_carlo_tree.dt')
-        self.visualize_node(vis_tree, self.root, parent_node_name=None, edge_label=None, add_text=None)
+        vis_tree = graphviz.Graph(name='Monte Carlo Tree', filename=f'TREES/monte_carlo_tree_{self.vis_counter}.gv')
+        self.vis_counter += 1
+        self.visualize_node(vis_tree, self.root, parent_node_name=None, edge_label=None, add_text=self.root.N)
         vis_tree.render(view=True)
     
     def visualize_node(self, vis_tree, node, parent_node_name, edge_label, add_text):
@@ -102,10 +132,19 @@ class MonteCarloTree:
         label = f'{node.state}'
         if add_text != None:
             label = f'{label}\n{add_text}'
-        vis_tree.node(name=name, label=label)
+        # if node.state[0] == 1:
+        #     vis_tree.attr('node', shape='triangle')
+        # elif node.state[0] == 2:
+        #     vis_tree.attr('node', shape='invtriangle')
+        if node.state[0] == 1:
+            vis_tree.node(name=name, label=label)
+        else:
+            vis_tree.node(name=name, label=label, style='filled', color='#dddddd')
         if parent_node_name != None:
             vis_tree.edge(tail_name=parent_node_name, head_name=name, label=edge_label)
         
-        for child, n, q in zip(node.children, node.Ns, node.get_Qs()):
-            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action + 1}', add_text=f'{n}\n{q: 0.3f}')
+        
+        for child, n, q, u in zip(node.children, node.Ns, node.get_Qs(), node.get_us()):
+            value = q + u if node.state[0] == 1 else q - u
+            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action + 1}', add_text=f'{n}\nQ: {q: 0.3f}\nV: {value: 0.3f}')
         

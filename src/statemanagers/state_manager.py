@@ -35,6 +35,6 @@ class StateManager(ABC):
         pass
 
     @abstractmethod
-    def get_state_space_size(self):
+    def get_state_size(self):
         pass
 

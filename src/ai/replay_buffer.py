@@ -20,4 +20,22 @@ class ReplayBuffer:
         indices = np.random.choice(range(len(self.buffer)), size=batch_size, replace=False)
         batch = [self.buffer[i] for i in indices]        
         return batch
+
+    def print_histogram(self):
+        states = [state for state, D in self.buffer]
+        uniques = np.unique(states, axis=0)
+        counts = {}
+        for u in uniques:
+            counts[tuple(u.tolist())] = 0
+
+        for state in states:
+            counts[tuple(state)] += 1
+
+        for key, val in counts.items():
+            print(f'{list(key)}: {val}')
+
+        
+
+
+
     

@@ -94,5 +94,5 @@ class HEXStateManager(StateManager):
     def get_action_space_size(self):
         return self.K*self.K
 
-    def get_state_space_size(self):
+    def get_state_size(self):
         return self.K*self.K + 1
