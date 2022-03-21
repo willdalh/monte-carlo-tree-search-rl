@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import time
+import logging
 
 from ai.agent import Agent
 from statemanagers.state_manager import StateManager
@@ -14,10 +15,12 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     NUM_ANET_SAVES = args.num_anet_saves
     tic = time.time()
 
-    # Store one instance of the ANET prior to training
-    agent.anet.save_model(f'{args.log_dir}/models', f'anet_{0}.pt')
-
     for e in range(NUM_EPISODES + 1):
+        if e%(int(NUM_EPISODES/(NUM_ANET_SAVES - 1))) == 0:
+            agent.anet.save_model(f'{args.log_dir}/models', f'anet_{e}.pt')
+        if e == NUM_EPISODES:
+            break
+
         state = sm.get_initial_state()
 
         mct.set_root(state)
@@ -32,23 +35,10 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                 leaf = mct.tree_search_expand(sm)
                 Z = agent.rollout(sm, leaf)
                 mct.backpropagate(leaf, Z)
-                # mct.visualize()
 
-            D = mct.get_visit_distribution()
-            if (state == [1, 2] or state == [2, 2] or state == [1, 3] or state == [2, 3]) and False:
-                print('\n')
-                print('state:', state)
-                print('Qs:', mct.root.get_Qs())
-                print('Ns:', mct.root.Ns)
-                print('dist:', D)
-            # print('\n', state)
-            # print('Qs', mct.root.get_Qs())
-            # print('us', mct.root.get_us())
-            # print('N', mct.root.N)
-            
             # mct.visualize()
-            # if state[1] != 8:
-            #     quit()
+            # quit()
+            D = mct.get_visit_distribution()
             
             agent.store_case((state, D))
             action = np.argmax(D)
@@ -60,55 +50,34 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                     break
             mct.set_root(child_selected)
             state = mct.root.state
-            # D = distribution of visit counts in MCT along all arcs emanating from root
-            # Add case (root, D) Will be (state, D)
 
-            # Choose actual move a* based on D
-            # Perform a* on root to produce successor state s*
-            # Update mct to s*
-            # In MCT, retain subtree rooted at s*, discard everything else
-            # set root = s*
         
         # Train ANET on a random minibatch of cases from ReplayBuffer
-        agent.train_on_buffer_batch(sm, debug=NUM_EPISODES - e < 30)
-        winner = sm.get_winner(state)
+        mean_loss = agent.train_on_buffer_batch(debug=NUM_EPISODES - e < 30)
+
         
         # print('End of episode')
-        if e%(int(NUM_EPISODES/20)) == 0:
-            print(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon}')
-
-        if e%(int(NUM_EPISODES/(NUM_ANET_SAVES - 1))) == 0 and e != 0:
-            agent.anet.save_model(f'{args.log_dir}/models', f'anet_{e}.pt')
-            # Save ANET parameters
+        if e%(int(NUM_EPISODES/40)) == 0:
+            print(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon: 0.5f} loss={mean_loss: 0.4f}')
 
         # [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]
-
-
-
-
 
 
     toc = time.time()
     print(f'Time used for training: {toc-tic} seconds')
 
     # Verification
-    agent.present_results()
+    agent.present_results(args.log_dir)
     agent.epsilon = 0
     for e in range(4):
-        print('Round', e)
+        logging.debug(f'Round {e}')
         state = sm.get_initial_state()
         while not sm.is_final(state):
-            print('Current state:', state)
+            logging.debug(f'Current state: {state}')
             action = agent.choose_action(state, sm.get_legal_moves(state), debug=True)
             if action not in sm.get_legal_moves(state):
-                print('Had to choose random')
+                logging.debug('Had to choose random')
                 action = np.random.choice(sm.get_legal_moves(state))
             state = sm.get_successor(state, action)
     
-
-    print('Replay buffer contents:')
-    agent.buffer.print_histogram()
-    # print('Dist for [1, 3]', output)
-    # plt.plot(np.arange(len(wins)), wins)
-    # plt.show()
 

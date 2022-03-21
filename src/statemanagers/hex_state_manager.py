@@ -1,12 +1,20 @@
 import numpy as np
+import sys
 from .state_manager import StateManager
+
+sys.path.append('statemanagers')
+from visualizers.hex_visualizer import HEXVisualizer
 
 class HEXStateManager(StateManager):
     def __init__(self, hex_k, **_):
         self.K = hex_k
+        self.visualizer = HEXVisualizer(self.K)
+
+        self.temp_board = np.zeros((self.K, self.K))
 
     def get_initial_state(self):
-        player_turn = np.random.randint(1, 3)
+        # player_turn = np.random.randint(1, 3)
+        player_turn = 1
         return [player_turn, *[0 for _ in range(self.K * self.K)]]
 
     def get_successor_states(self, state, return_moves=False):
@@ -22,27 +30,54 @@ class HEXStateManager(StateManager):
         curr_player = state[0]
         board = state[1:]
         board[a] = curr_player
-        next_player = 2 if curr_player == 1 else 1
+        next_player = -1 * curr_player
         return [next_player, *board]
+
+    def get_winner_chain(self, state):
+        board = state[1:]
+    
+        for y in range(self.K):
+            for x in range(self.K):
+                self.temp_board[y, x] = board[y * self.K + x] 
+
+        # Check two borders
+        for i in range(self.temp_board.shape[0]):
+            if self.temp_board[0, i] == 1: # Player 1 should span all rows
+                found_chain, chain = self.flood_check(self.temp_board, (0, i), 1, [])
+                if found_chain:
+                    return chain
+
+        for i in range(self.temp_board.shape[0]):
+            if self.temp_board[i, 0] == -1: # Player 2 should span all columns
+                found_chain, chain = self.flood_check(self.temp_board, (i, 0), -1, [])
+                if found_chain:
+                    return chain
 
     def is_final(self, state):
         board = state[1:]
-        board = np.array(board).reshape(self.K, self.K)
+        
+        for y in range(self.K):
+            for x in range(self.K):
+                self.temp_board[y, x] = board[y * self.K + x] 
 
         # Check two borders
-        for i in range(board.shape[0]):
-            if board[i, 0] == 1:
-                found_chain = self.flood_check(board, (i, 0), 1, [])
+        for i in range(self.temp_board.shape[0]):
+            if self.temp_board[0, i] == 1: # Player 1 should span all rows
+                found_chain, chain = self.flood_check(self.temp_board, (0, i), 1, [])
                 if found_chain:
                     return True
 
-        for i in range(board.shape[0]):
-            if board[0, i] == 2:
-                found_chain = self.flood_check(board, (0, i), 2, [])
+        for i in range(self.temp_board.shape[0]):
+            if self.temp_board[i, 0] == -1: # Player 2 should span all columns
+                found_chain, chain = self.flood_check(self.temp_board, (i, 0), -1, [])
                 if found_chain:
                     return True
+
         
+
         return False
+
+    
 
     def flood_check(self, board, coord, player, checked):
         r, c = coord
@@ -50,12 +85,12 @@ class HEXStateManager(StateManager):
         
         # Check if other wall is reached
         if player == 1:
-            if c == self.K - 1:
-                return True
-        if player == 2:
-            if r == self.K - 1:
-                return True
-
+            if r == self.K - 1: # Reached last row
+                return True, [coord]
+        if player == -1:
+            if c == self.K - 1: # Reached last column
+                return True, [coord]
+                
         # Find valid neighbors of coord
         neigbor_indices = []
         for r_off in [-1, 0, 1]:
@@ -67,11 +102,13 @@ class HEXStateManager(StateManager):
                         neigbor_indices.append(neighbor)
                         
         found_chain = False
+        chain = []
         for neighbor in neigbor_indices:
-            if self.flood_check(board, neighbor, player, checked):
-                found_chain = True
+            found_chain, chain = self.flood_check(board, neighbor, player, checked)
+            if found_chain:
+                chain.append(coord)
                 break
-        return found_chain
+        return found_chain, chain
 
 
     def is_valid_coord(self, coord):
@@ -81,7 +118,7 @@ class HEXStateManager(StateManager):
     
     def get_winner(self, state):
         curr_player = state[0]
-        winner = 2 if curr_player == 1 else 1
+        winner = -1 * curr_player
         return winner
 
     def get_legal_moves(self, state):
@@ -96,3 +133,10 @@ class HEXStateManager(StateManager):
 
     def get_state_size(self):
         return self.K*self.K + 1
+
+    def flip_state(self, state):
+        pass
+
+    def render_state(self, state, chain=None):
+        board = np.array(state[1:]).reshape(self.K, self.K)
+        self.visualizer.draw_board(board, chain)

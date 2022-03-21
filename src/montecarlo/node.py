@@ -7,7 +7,6 @@ class Node:
         self.origin_action = origin_action
         self.state = state
         
-
         self.N = 0
 
         self.children = []

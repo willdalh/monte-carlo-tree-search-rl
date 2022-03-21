@@ -1,40 +1,70 @@
 from statemanagers.state_manager import StateManager
-from ai.agent import Agent
+from ai.agent import PreTrainedAgent
 
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
 class TOPP:
-    def __init__(self, model_paths, sm: StateManager, nn_dim):
-        self.agents = [Agent(100, 100, 100, nn_dim, 'adam', 1000) for i in model_paths]
+    def __init__(self, game_name, model_paths, sm: StateManager, nn_dim, num_duel_games):
+        self.game_name = game_name.lower()
+        self.agents = [PreTrainedAgent(path, nn_dim) for path in model_paths]
         self.sm = sm
-        self.num_games = 50
-        for i, (agent, path) in enumerate(zip(self.agents, model_paths)):
-            agent.epsilon = 0
-            agent.load_model(path)
+        self.num_games = num_duel_games
+        for i, agent in enumerate(self.agents):
             agent.index = i
         self.wins = np.zeros(len(self.agents))
 
         self.state_counts = {}
         
         print(model_paths)
+
+        # TESTING
+        board = np.array([
+            [0, 0, 0, -1],
+            [0, -1, 1, 0],
+            [-1, 1, 0, 0],
+            [1, 0, 0, 0]
+        ])
+
+        # board = np.array([
+        #     [0, 0, 0, 1],
+        #     [0, -1, 0, -1],
+        #     [0, 1, 0, 0],
+        #     [1, -1, 0, 0]
+        # ])
+
+        state = [1, *list(board.ravel())]
+        print(torch.Tensor([state]))
+        dist = self.agents[-1].anet(torch.Tensor([state]))
+        
+        print(dist.reshape(4, 4))
+
+
         
     
 
-    def run(self):
+    def run(self, alternate=False):
+        last = -1
         for i, agent1 in enumerate(self.agents[:-1]):
             for j, agent2 in enumerate(self.agents[i+1:], i+1):
-                for g in range(self.num_games):
-                    if np.random.randint(1, 3) == 1: 
-                        self.duel(agent1, agent2)
-                    else:
-                        self.duel(agent2, agent1)
                 print(i, j)
+                for g in range(self.num_games):
+                    render = agent1.index != last and self.game_name == 'hex'
+                    switch = False
+                    if alternate:
+                        switch = np.random.choice([True, False])
 
-    def duel(self, agent1, agent2):
+                    if switch:
+                        self.duel(agent1, agent2, render)
+                    else:
+                        self.duel(agent2, agent1, render)
+                    last = agent1.index
+                    
+
+    def duel(self, agent1, agent2, render=False):
         state = self.sm.get_initial_state()
-    
+
         while not self.sm.is_final(state):
             self.count_state(state) # Debug
 
@@ -44,15 +74,21 @@ class TOPP:
             if curr_player == 1:
                 action = agent1.choose_action(state, legal_moves)
 
-            if curr_player == 2:
+            if curr_player == -1:
                 action = agent2.choose_action(state, legal_moves)
 
+            if render and self.game_name == 'hex':
+                self.sm.render_state(state)
             state = self.sm.get_successor(state, action)
+        
+        if render and self.game_name == 'hex':
+            chain = self.sm.get_winner_chain(state)
+            self.sm.render_state(state, chain)
 
         winner = self.sm.get_winner(state)
         if winner == 1:
             self.wins[agent1.index] += 1
-        elif winner == 2:
+        elif winner == -1:
             self.wins[agent2.index] += 1
 
     def count_state(self, state):

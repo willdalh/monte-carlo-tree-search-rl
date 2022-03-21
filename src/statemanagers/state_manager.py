@@ -38,3 +38,7 @@ class StateManager(ABC):
     def get_state_size(self):
         pass
 
+    @abstractmethod
+    def render_state(self, state):
+        pass
+

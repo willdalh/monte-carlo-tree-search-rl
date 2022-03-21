@@ -7,11 +7,13 @@ class NIMStateManager(StateManager):
         self.K = nim_k
 
     def get_initial_state(self):
-        player_turn = np.random.randint(1, 3)
-        # player_turn = 1
+        '''Return an initial state'''
+        # player_turn = np.random.randint(1, 3)
+        player_turn = 1
         return [player_turn, self.N]
 
     def get_successor_states(self, state, return_moves=False):
+        ''''''
         legal_moves = self.get_legal_moves(state)
         successors = []
         for a in legal_moves:
@@ -25,7 +27,7 @@ class NIMStateManager(StateManager):
         curr_player = state[0]
         curr_n = state[1]
         curr_n -= a + 1 # Because a is the action index, and choosing index 0 you pick 1 stone
-        next_player = 2 if curr_player == 1 else 1
+        next_player = -1 * curr_player
         return [next_player, curr_n]
 
     def is_final(self, state):
@@ -33,7 +35,7 @@ class NIMStateManager(StateManager):
     
     def get_winner(self, state): # Assumes state input is final
         curr_player = state[0]
-        winner = 2 if curr_player == 1 else 1 # Winner is not the current player
+        winner = -1 * curr_player # Winner is not the current player
         return winner
 
     def get_legal_moves(self, state):
@@ -48,5 +50,11 @@ class NIMStateManager(StateManager):
 
     def get_state_size(self):
         return 2
+
+    def flip_state(self, state):
+        return state
+
+    def render_state(self, state):
+        print(f'State is {state}')
     
 

@@ -23,20 +23,20 @@ class MonteCarloTree:
         else:
             self.root = Node(parent=None, origin_action=None, state=state, c=self.c)
 
-    def expand_to_depth(self, sm: StateManager):
-        self._expand(sm, self.max_depth, self.root)
+    # def expand_to_depth(self, sm: StateManager):
+    #     self._expand(sm, self.max_depth, self.root)
     
-    def _expand(self, sm: StateManager, depth, parent):
-        # Recursively expand nodes to a certain depth
-        if depth == 0 or sm.is_final(parent.state):
-            return
+    # def _expand(self, sm: StateManager, depth, parent):
+    #     # Recursively expand nodes to a certain depth
+    #     if depth == 0 or sm.is_final(parent.state):
+    #         return
 
-        # TODO perform check whether parent is final. Then no children exists. EDIT: Think it happens automatically, check
-        if len(parent.children) == 0: # Refer to statemanager to generate children states
-            self.expand_node(parent=parent, sm=sm)
+    #     # TODO perform check whether parent is final. Then no children exists. EDIT: Think it happens automatically, check
+    #     if len(parent.children) == 0: # Refer to statemanager to generate children states
+    #         self.expand_node(parent=parent, sm=sm)
         
-        for child in parent.children:
-            self._expand(sm, depth - 1, child)
+    #     for child in parent.children:
+    #         self._expand(sm, depth - 1, child)
 
     def expand_node(self, parent: Node, sm: StateManager):
         children_states, moves = sm.get_successor_states(parent.state, return_moves=True)
@@ -44,35 +44,22 @@ class MonteCarloTree:
             parent.add_child(Node(parent=parent, origin_action=move, state=state, c=self.c))
         return len(children_states) > 0
 
-    def tree_search(self):
-        # Find a leaf node and return it so the ANET can perform rollout on it 
-        curr_node = self.root
-        while len(curr_node.children) != 0:
-            Qs = curr_node.get_Qs()
-            us = curr_node.get_us()
-            curr_player = curr_node.state[0]
-            # if np.any([np.isnan(u) for u in us]):
-            #     print('\n')
-            #     print(us)
-            #     print(curr_node.state)
-            #     if curr_player == 1:
-            #         print([q + u for q, u in zip(Qs, us)])
-            #         print(np.argmax([q + u for q, u in zip(Qs, us)]))
-            #     elif curr_player == 2:
-            #         [q - u for q, u in zip(Qs, us)]
-            #         print(np.argmin([q - u for q, u in zip(Qs, us)]))
-                # self.visualize()
-                # quit()
-            
+    # def tree_search(self):
+    #     # Find a leaf node and return it so the ANET can perform rollout on it 
+    #     curr_node = self.root
+    #     while len(curr_node.children) != 0:
+    #         Qs = curr_node.get_Qs()
+    #         us = curr_node.get_us()
+    #         curr_player = curr_node.state[0]
 
-            child_selected_index = None
-            if curr_player == 1:
-                child_selected_index = np.argmax([q + u for q, u in zip(Qs, us)])
-            elif curr_player == 2:
-                child_selected_index = np.argmin([q - u for q, u in zip(Qs, us)])
-            curr_node = curr_node.children[child_selected_index]
+    #         child_selected_index = None
+    #         if curr_player == 1:
+    #             child_selected_index = np.argmax([q + u for q, u in zip(Qs, us)])
+    #         elif curr_player == -1:
+    #             child_selected_index = np.argmin([q - u for q, u in zip(Qs, us)])
+    #         curr_node = curr_node.children[child_selected_index]
 
-        return curr_node
+    #     return curr_node
 
     def tree_search_expand(self, sm: StateManager):
         '''Tree traversal as shown by John Levine on YouTube'''
@@ -85,17 +72,17 @@ class MonteCarloTree:
             child_selected_index = None
             if curr_player == 1:
                 child_selected_index = np.argmax([q + u for q, u in zip(Qs, us)])
-            elif curr_player == 2:
+            elif curr_player == -1:
                 child_selected_index = np.argmin([q - u for q, u in zip(Qs, us)])
             curr_node = curr_node.children[child_selected_index]
         
         if curr_node.N == 0:
             return curr_node
         else:
-            expanded = self.expand_node(curr_node, sm)
-            if not expanded:
+            has_expanded = self.expand_node(curr_node, sm)
+            if not has_expanded:
                 return curr_node
-            return curr_node.children[0]
+            return np.random.choice(curr_node.children)
 
 
 
@@ -122,12 +109,15 @@ class MonteCarloTree:
 
 
     def visualize(self):
+        self.nodes_created = 0
         vis_tree = graphviz.Graph(name='Monte Carlo Tree', filename=f'TREES/monte_carlo_tree_{self.vis_counter}.gv')
         self.vis_counter += 1
         self.visualize_node(vis_tree, self.root, parent_node_name=None, edge_label=None, add_text=self.root.N)
+        print(f'Nodes visualized: {self.nodes_created}')
         vis_tree.render(view=True)
     
     def visualize_node(self, vis_tree, node, parent_node_name, edge_label, add_text):
+        self.nodes_created += 1
         name= f'node_{np.random.rand()}'
         label = f'{node.state}'
         if add_text != None:
@@ -144,7 +134,7 @@ class MonteCarloTree:
             vis_tree.edge(tail_name=parent_node_name, head_name=name, label=edge_label)
         
         
-        for child, n, q, u in zip(node.children, node.Ns, node.get_Qs(), node.get_us()):
+        for child, n, e, q, u in zip(node.children, node.Ns, node.Es, node.get_Qs(), node.get_us()):
             value = q + u if node.state[0] == 1 else q - u
-            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action + 1}', add_text=f'{n}\nQ: {q: 0.3f}\nV: {value: 0.3f}')
+            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action + 1}', add_text=f'{n}\nE: {e} Q: {q: 0.3f}\nV: {value: 0.3f}')
         

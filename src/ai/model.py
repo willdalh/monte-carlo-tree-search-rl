@@ -16,7 +16,6 @@ class Model(nn.Module):
             raise ValueError('First element specified in nn_dim must be an integer')
 
         layers = Model.generate_layers(nn_dim)
-
         od = OrderedDict(layers)
         self.net = nn.Sequential(od)
         
@@ -48,9 +47,15 @@ class Model(nn.Module):
     def to_string(self):
         '''Present the neural network structure, without the bias terms'''
         string = ''
+        param_count = 0
         for name, layer in list(self.net.named_parameters())[::2]:
             string += f'{name} with shape {layer.shape}\n'
-        return string
+        
+        for name, layer in list(self.net.named_parameters()):
+            param_count += torch.flatten(layer.data).shape[0]
+
+        
+        return string + f'\nNumber of parameters: {param_count}'
 
     def save_model(self, path, name):
         '''Save the model parameters to file'''
@@ -91,7 +96,7 @@ class Model(nn.Module):
         Returns:
             List of tuples, where each tuple contains the name and an instantiated object of either a linear layer or an activation function
         '''
-        structure = [e for e in nn_dim if isinstance(e, int)] # Get hidden layer sizes, aka filter out activation functions
+        structure = [e for e in nn_dim if isinstance(e, int)] # Get hidden layer sizes by filtering out activation functions
         layers = []
         layers_test = []
 

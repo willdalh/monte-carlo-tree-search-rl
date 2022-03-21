@@ -4,6 +4,7 @@ import shutil
 import json
 import importlib
 import glob
+import logging
 
 from montecarlo.monte_carlo_tree import MonteCarloTree
 from ai.agent import Agent
@@ -25,11 +26,16 @@ def main(args):
 
         if os.path.isdir(args.log_dir):
             shutil.rmtree(args.log_dir)
-        os.mkdir(ns_args.log_dir)
-        os.mkdir(f'{ns_args.log_dir}\\models')
+        os.mkdir(args.log_dir)
+        os.mkdir(f'{args.log_dir}/models')
 
-        with open(f'{ns_args.log_dir}/args.json', 'w') as f:
-            json.dump(ns_args.__dict__, f, indent=2)
+        with open(f'{args.log_dir}/args.json', 'w') as f:
+            json.dump(args.__dict__, f, indent=4)
+
+        logging.basicConfig(filename=f'{args.log_dir}/debug.log', format='%(message)s', level=logging.DEBUG)
+        logging.getLogger('matplotlib').setLevel(logging.WARNING)
+        logging.getLogger('PIL').setLevel(logging.WARNING)
+        logging.debug('Starting')
 
         # Import chosen state manager
         sm_file_name = '%s_state_manager' % args.game.lower()
@@ -42,14 +48,14 @@ def main(args):
 
         kwargs = vars(args)
 
-        agent = Agent(**kwargs)
+        agent = Agent(**kwargs, state_size=sm.get_state_size(), action_space_size=sm.get_action_space_size())
         mct = MonteCarloTree(**kwargs, action_space=sm.get_action_space())
 
         run_training(args, sm, mct, agent)
     
     else:
         saved_args = argparse.Namespace()
-        with open(f'{ns_args.saved_dir}/args.json', 'r') as f:
+        with open(f'{args.saved_dir}/args.json', 'r') as f:
             saved_args.__dict__ = json.load(f)
         
         sm_file_name = '%s_state_manager' % saved_args.game.lower()
@@ -65,7 +71,7 @@ def main(args):
         if len(model_paths) == 0:
             raise FileNotFoundError('No saved ANETs found in the specified directory')
 
-        topp = TOPP(model_paths, sm, nn_dim=saved_args.nn_dim)
+        topp = TOPP(saved_args.game, model_paths, sm, nn_dim=saved_args.nn_dim, num_duel_games=args.num_duel_games)
         topp.run()
         topp.present_results()
 
@@ -84,7 +90,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('Run main')
 
     # General parameters
-    parser.add_argument('--episodes', type=int, default=50, help='The number of actual games the system will run')
+    parser.add_argument('--episodes', type=int, default=500, help='The number of actual games the system will run')
 
     # Logging and saving
     parser.add_argument('--log_dir', type=str, default='train_log_test', help='The folder name to save logs and instances of ANETs')
@@ -97,11 +103,11 @@ if __name__ == '__main__':
     parser.add_argument('--hex_k', type=int, default=3, help='The size of the k x k Hex board')
 
     # NIM
-    parser.add_argument('--nim_n', type=int, default=8, help='The number of pieces the NIM-board starts with')
-    parser.add_argument('--nim_k', type=int, default=2, help='The maximum number of pieces a player can remove each round')
+    parser.add_argument('--nim_n', type=int, default=10, help='The number of pieces the NIM-board starts with')
+    parser.add_argument('--nim_k', type=int, default=3, help='The maximum number of pieces a player can remove each round')
     
     # MCTS parameters
-    parser.add_argument('--search_games', type=int, default=400, help='The number of search games to be simulated for each root state')
+    parser.add_argument('--search_games', type=int, default=500, help='The number of search games to be simulated for each root state')
     parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
     parser.add_argument('--c', type=float, default=1.0, help='Exploration constant for the tree policy')
 
@@ -109,14 +115,14 @@ if __name__ == '__main__':
     parser.add_argument('--buffer_size', type=int, default=500000, help='The maximum size of the replay buffer')
     parser.add_argument('--batch_size', type=int, default=64, help='The size of the batch the agent uses to train on')
     parser.add_argument('--lr', type=float, default=0.001, help='The learning rate for the ANET')
-    parser.add_argument('--nn_dim', type=str_to_list, default='128,relu,64,relu', help='The structure of the neural network, excluding the state space size at the start and the action space size at the end')
+    parser.add_argument('--nn_dim', type=str_to_list, default='256,relu,256,relu', help='The structure of the neural network, excluding the state space size at the start and the action space size at the end')
     parser.add_argument('--optimizer', type=str, default='adam', help='The optimizer used by the neural network to perform gradient descent')
-    parser.add_argument('--epsilon_decay', type=float, default=0.99, help='The value to decay epsilon by for every action taken')
+    parser.add_argument('--epsilon_decay', type=float, default=0.99, help='The value to decay epsilon by for every episode')
 
     # TOPP
     parser.add_argument('--run_topp', type=str_to_bool, default=False, help='Whether or not to run TOPP')
     parser.add_argument('--saved_dir', type=str, default='train_log_test', help='The root folder where the saved nets reside')
-    parser.add_argument('--num_duel_games', type=int, default=10, help='The number of games to be played between any two ANET-based agents during TOPP')
+    parser.add_argument('--num_duel_games', type=int, default=25, help='The number of games to be played between any two ANET-based agents during TOPP')
 
 
 
@@ -143,4 +149,19 @@ if __name__ == '__main__':
     python main.py --episodes 400 --lr 0.00001 --epsilon_decay 0.99999
 
     python main.py --episodes 600 --lr 0.005 --epsilon_decay 0.99 --nim_k 3 --nim_n 9
+
+    NÅR SAMME SPILLER STARTER HELE TIDEN n=10 k=3
+    SIGMOID:
+    python main.py --episodes 1000 --epsilon_decay 0.995 --lr 0.003
+
+    RELU funker også
+    python main.py --episodes 1000 --epsilon_decay 0.995 --lr 0.001
+
+
+    NÅR target er argmax
+    python main.py --episodes 100 --epsilon_decay 0.97 --lr 0.002 --search_games 500
+
+
+    FOR MYE EPISODER KANSKJE
+    python main.py --episodes 1000 --epsilon_decay 0.997 --lr 0.001 --search_games 500 --game HEX --hex_k 4 --run_topp True
     '''
