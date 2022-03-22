@@ -52,7 +52,13 @@ class NIMStateManager(StateManager):
         return 2
 
     def flip_state(self, state):
-        return state[0], state[1]
+        return state[0], [state[1]], True
+
+    def flip_action(self, action, state_was_flipped):
+        return action
+
+    # def get_symmetric_cases(self, case):
+    #     state, 
 
     def render_state(self, state):
         print(f'State is {state}')

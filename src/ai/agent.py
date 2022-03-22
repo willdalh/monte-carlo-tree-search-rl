@@ -46,7 +46,7 @@ class Agent:
             self.anet.optimizer.step()
             self.anet.optimizer.zero_grad()
 
-            if debug and epoch > 6:
+            if debug:
                 with torch.no_grad():
                     logging.debug('')
                     logging.debug(f'state: {states[0]}')
@@ -63,12 +63,13 @@ class Agent:
         return mean_loss
 
     def store_case(self, case, sm: StateManager):
-        self.buffer.store_case(case)
+        state, D = case
+        curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
+        self.buffer.store_case((flipped_state, D))
         
         if isinstance(sm, HEXStateManager):
-            state, D = case
-            symmetric_state = state[-sm.K * sm.K:][::-1] # Rotate 180 degrees
-            symmetric_state.insert(0, state[0]) # Insert current player
+            symmetric_state = flipped_state[::-1] # Rotate 180 degrees
+            # symmetric_state.insert(0, state[0]) # Insert current player
             symmetric_D = D[::-1] # Rotate 180 degrees
             self.buffer.store_case((symmetric_state, symmetric_D))
             

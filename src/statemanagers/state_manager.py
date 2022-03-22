@@ -39,6 +39,10 @@ class StateManager(ABC):
         pass
 
     @abstractmethod
+    def flip_state(self, state):
+        pass
+
+    @abstractmethod
     def render_state(self, state):
         pass
 

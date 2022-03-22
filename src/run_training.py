@@ -27,10 +27,8 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
         mct.expand_node(mct.root, sm)
 
         while not sm.is_final(state):
-            # Initialize monte carlo game board to same state as root
-            # mct.expand_to_depth(sm)
 
-            if args.search_time <= 0:
+            if args.search_games > 0:
                 for g in range(NUM_SEARCH_GAMES):
                     # Tree policy
                     leaf = mct.tree_search_expand(sm)
@@ -44,7 +42,12 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                     Z = mct.rollout(agent, sm, leaf)
                     mct.backpropagate(leaf, Z)
                     search_games += 1
+
+            # mct.visualize()
             
+            
+            # count += 1
+            # if count == 7:
             # mct.visualize()
             # quit()
             D = mct.get_visit_distribution()
@@ -60,14 +63,14 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             mct.set_root(child_selected)
             state = mct.root.state
 
-        
+        # quit()
         # Train ANET on a random minibatch of cases from ReplayBuffer
         mean_loss = agent.train_on_buffer_batch(debug=NUM_EPISODES - e < 30)
 
         
         # print('End of episode')
         if e%(int(NUM_EPISODES/40)) == 0:
-            print(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon: 0.5f} loss={mean_loss: 0.4f}')
+            print(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon:0.5f} loss={mean_loss:0.4f} buffersize={agent.buffer.cases_added}')
 
         # [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]
 
@@ -83,7 +86,9 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
         state = sm.get_initial_state()
         while not sm.is_final(state):
             logging.debug(f'Current state: {state}')
-            action = agent.choose_action(state, sm.get_legal_moves(state), debug=True)
+            curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
+            action = agent.choose_action(flipped_state, sm.get_legal_moves(state), debug=True)
+            action = sm.flip_action(action, state_was_flipped)
             if action not in sm.get_legal_moves(state):
                 logging.debug('Had to choose random')
                 action = np.random.choice(sm.get_legal_moves(state))

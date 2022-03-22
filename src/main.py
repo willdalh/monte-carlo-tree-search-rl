@@ -42,13 +42,15 @@ def main(args):
         sm_class_name = '%sStateManager' % args.game
         state_manager = importlib.import_module('statemanagers.%s'%sm_file_name).__dict__[sm_class_name]
         sm = state_manager(**vars(args))
-
-        args.nn_dim.insert(0, sm.get_state_size())
-        args.nn_dim.append(sm.get_action_space_size())
+        
+        state_size = sm.get_state_size()
+        action_space_size = sm.get_action_space_size()
+        args.nn_dim.insert(0, state_size-1)
+        args.nn_dim.append(action_space_size)
 
         kwargs = vars(args)
 
-        agent = Agent(**kwargs, state_size=sm.get_state_size(), action_space_size=sm.get_action_space_size())
+        agent = Agent(**kwargs, state_size=state_size-1, action_space_size=action_space_size)
         mct = MonteCarloTree(**kwargs, action_space=sm.get_action_space())
 
         run_training(args, sm, mct, agent)
@@ -63,7 +65,7 @@ def main(args):
         state_manager = importlib.import_module('statemanagers.%s'%sm_file_name).__dict__[sm_class_name]
         sm = state_manager(**vars(saved_args))
 
-        saved_args.nn_dim.insert(0, sm.get_state_size())
+        saved_args.nn_dim.insert(0, sm.get_state_size()-1)
         saved_args.nn_dim.append(sm.get_action_space_size())
   
         model_paths = glob.glob(f'{args.saved_dir}/models/anet*.pt')
@@ -107,8 +109,8 @@ if __name__ == '__main__':
     parser.add_argument('--nim_k', type=int, default=3, help='The maximum number of pieces a player can remove each round')
     
     # MCTS parameters
-    parser.add_argument('--search_time', type=float, default=2.0, help='Time allowed for performing search games for each episode')
-    parser.add_argument('--search_games', type=int, default=500, help='The number of search games to be simulated for each root state. Used when search_time <= 0.')
+    parser.add_argument('--search_games', type=int, default=500, help='The number of search games to be simulated for each root state.')
+    parser.add_argument('--search_time', type=float, default=0.5, help='Time allowed for performing search games for each episode. Used when search_games <= 0.')
     parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
     parser.add_argument('--c', type=float, default=1.0, help='Exploration constant for the tree policy')
 

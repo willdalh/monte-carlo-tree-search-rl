@@ -153,6 +153,7 @@ class HEXVisualizer:
 if __name__ == '__main__':
     K = 3
     vis = HEXVisualizer(K)
-    board = np.random.randint(-1, 2, (K, K))
+    # board = np.random.randint(-1, 2, (K, K))
+    board = np.array([0, 0, 1, -1, -1, 1, 1, -1, 0]).reshape(K, K)
     print(board)
-    vis.draw_board(board)
+    vis.draw_board(board, 1)

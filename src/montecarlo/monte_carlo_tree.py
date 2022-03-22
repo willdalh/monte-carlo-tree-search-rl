@@ -11,7 +11,7 @@ class MonteCarloTree:
         self.action_space = action_space
         self.c = c
 
-        self.expansion_threshold = 5
+        self.expansion_threshold = 0
 
         self.root = None
 
@@ -41,7 +41,7 @@ class MonteCarloTree:
     #     for child in parent.children:
     #         self._expand(sm, depth - 1, child)
 
-    def expand_node(self, parent: Node, sm: StateManager):
+    def expand_node(self, parent: Node, sm: StateManager): # TODO LOOK INTO CHECKING FOR FINAL STATES WHEN GENERATING SUCCESSORS
         children_states, moves = sm.get_successor_states(parent.state, return_moves=True)
         for state, move in zip(children_states, moves):
             parent.add_child(Node(parent=parent, origin_action=move, state=state, c=self.c))
@@ -79,7 +79,7 @@ class MonteCarloTree:
                 child_selected_index = np.argmin([q - u for q, u in zip(Qs, us)])
             curr_node = curr_node.children[child_selected_index]
         
-        if curr_node.N < self.expansion_threshold:
+        if curr_node.N <= self.expansion_threshold:
             return curr_node
         else:
             has_expanded = self.expand_node(curr_node, sm)
@@ -90,8 +90,16 @@ class MonteCarloTree:
     def rollout(self, agent, sm: StateManager, leaf: Node):
         state = leaf.state
         while not sm.is_final(state): # Rollout to final state
-            legal_moves = sm.get_legal_moves(state)
-            action = agent.choose_action(state, legal_moves) 
+            curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
+            # print('\n')
+            # print(f'Player: {curr_player}')
+            # print(f'state: {state}')
+            # print(f'flipped: {flipped_state}')
+            legal_moves = sm.get_legal_moves([curr_player, *flipped_state])
+            action = agent.choose_action(flipped_state, legal_moves) 
+            # print(f'action: {action}')
+            action = sm.flip_action(action, state_was_flipped)
+            # print(f'flipped action: {action}')
             state = sm.get_successor(state, action)
         winner = sm.get_winner(state)
         Z = winner
@@ -147,5 +155,5 @@ class MonteCarloTree:
         
         for child, n, e, q, u in zip(node.children, node.Ns, node.Es, node.get_Qs(), node.get_us()):
             value = q + u if node.state[0] == 1 else q - u
-            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action + 1}', add_text=f'{n}\nE: {e} Q: {q: 0.3f}\nV: {value: 0.3f}')
+            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action}', add_text=f'{n}\nE: {e} Q: {q: 0.3f}\nV: {value: 0.3f}')
         

@@ -34,32 +34,38 @@ class TOPP:
         #     [1, -1, 0, 0]
         # ])
 
-        state = [1, *list(board.ravel())]
-        print(torch.Tensor([state]))
-        dist = self.agents[-1].anet(torch.Tensor([state]))
+        # state = [1, *list(board.ravel())]
+        # state = list(board.ravel())
+        # print(torch.Tensor([state]))
+        # dist = self.agents[-1].anet(torch.Tensor([state]))
         
-        print(dist.reshape(4, 4))
+        # print(dist.reshape(4, 4))
 
-
-        
-    
 
     def run(self, alternate=False):
         last = -1
         for i, agent1 in enumerate(self.agents[:-1]):
             for j, agent2 in enumerate(self.agents[i+1:], i+1):
                 print(i, j)
+                has_rendered = False
                 for g in range(self.num_games):
-                    render = agent1.index != last and self.game_name == 'hex'
+                    # render = agent1.index != last and self.game_name == 'hex' and False 
+                    # render = agent1.index == 0 and agent2.index == 9
+                    render = agent2.index == 9 and not has_rendered
                     switch = False
                     if alternate:
                         switch = np.random.choice([True, False])
 
                     if switch:
+                        if render:
+                            print(f'{agent1.index} plays first')
                         self.duel(agent1, agent2, render)
                     else:
+                        if render:
+                            print(f'{agent2.index} plays first')
                         self.duel(agent2, agent1, render)
                     last = agent1.index
+                    has_rendered = True
                     
 
     def duel(self, agent1, agent2, render=False):
@@ -69,13 +75,15 @@ class TOPP:
             self.count_state(state) # Debug
 
             curr_player = state[0]
-            legal_moves = self.sm.get_legal_moves(state)
 
+            player, flipped_state, state_was_flipped = self.sm.flip_state(state)
+            legal_moves = self.sm.get_legal_moves([player, *flipped_state])
             if curr_player == 1:
-                action = agent1.choose_action(state, legal_moves)
+                action = agent1.choose_action(flipped_state, legal_moves)
 
             if curr_player == -1:
-                action = agent2.choose_action(state, legal_moves)
+                action = agent2.choose_action(flipped_state, legal_moves)
+            action = self.sm.flip_action(action, state_was_flipped)
 
             if render and self.game_name == 'hex':
                 self.sm.render_state(state)

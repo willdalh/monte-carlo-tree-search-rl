@@ -76,7 +76,8 @@ class ReplayBufferTensor:
                 counts[tuple(map(int, u.tolist()))] = torch.count_nonzero(torch.all(self.states == u, dim=1))
 
         res = ''
-        for key, val in counts.items():
+        counts_sorted = dict(sorted(counts.items(), key=lambda x: x[1]))
+        for key, val in counts_sorted.items():
             res += f'{list(key)}: {val}\n'
         return res
     

@@ -18,6 +18,8 @@ class HEXStateManager(StateManager):
         return [player_turn, *[0 for _ in range(self.K * self.K)]]
 
     def get_successor_states(self, state, return_moves=False):
+        if self.is_final(state):
+            return [], [] # No children available
         legal_moves = self.get_legal_moves(state)
         successors = []
         for a in legal_moves:
@@ -33,12 +35,15 @@ class HEXStateManager(StateManager):
         next_player = -1 * curr_player
         return [next_player, *board]
 
-    def get_winner_chain(self, state):
+    def _fill_temp_board(self, state):
         board = state[1:]
     
         for y in range(self.K):
             for x in range(self.K):
                 self.temp_board[y, x] = board[y * self.K + x] 
+
+    def get_winner_chain(self, state):
+        self._fill_temp_board(state)
 
         # Check two borders
         for i in range(self.temp_board.shape[0]):
@@ -54,11 +59,7 @@ class HEXStateManager(StateManager):
                     return chain
 
     def is_final(self, state):
-        board = state[1:]
-        
-        for y in range(self.K):
-            for x in range(self.K):
-                self.temp_board[y, x] = board[y * self.K + x] 
+        self._fill_temp_board(state)
 
         # Check two borders
         for i in range(self.temp_board.shape[0]):
@@ -72,8 +73,6 @@ class HEXStateManager(StateManager):
                 found_chain, chain = self.flood_check(self.temp_board, (i, 0), -1, [])
                 if found_chain:
                     return True
-
-        
 
         return False
 
@@ -137,10 +136,17 @@ class HEXStateManager(StateManager):
     def flip_state(self, state):
         '''Flip state to make it from the perspective of player 1'''
         if state[0] == 1:
-            return state
+            return state[0], state[1:], False
         board = np.array(state[1:]).reshape(self.K, self.K)
         board = board.T * -1
-        return  state[0], list(board.ravel())
+        return  state[0], list(board.ravel()), True
+
+    def flip_action(self, action, state_was_flipped):
+        if state_was_flipped:
+            r, c = action//self.K, action%self.K # Find row and col
+            r, c = c, r # Flip
+            return r * self.K + c
+        return action
 
     def render_state(self, state, chain=None):
         board = np.array(state[1:]).reshape(self.K, self.K)
