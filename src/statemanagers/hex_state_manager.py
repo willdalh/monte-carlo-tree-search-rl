@@ -135,8 +135,13 @@ class HEXStateManager(StateManager):
         return self.K*self.K + 1
 
     def flip_state(self, state):
-        pass
+        '''Flip state to make it from the perspective of player 1'''
+        if state[0] == 1:
+            return state
+        board = np.array(state[1:]).reshape(self.K, self.K)
+        board = board.T * -1
+        return  state[0], list(board.ravel())
 
     def render_state(self, state, chain=None):
         board = np.array(state[1:]).reshape(self.K, self.K)
-        self.visualizer.draw_board(board, chain)
+        self.visualizer.draw_board(board, player=state[0], chain=chain)

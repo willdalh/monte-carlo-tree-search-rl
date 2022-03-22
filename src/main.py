@@ -107,7 +107,8 @@ if __name__ == '__main__':
     parser.add_argument('--nim_k', type=int, default=3, help='The maximum number of pieces a player can remove each round')
     
     # MCTS parameters
-    parser.add_argument('--search_games', type=int, default=500, help='The number of search games to be simulated for each root state')
+    parser.add_argument('--search_time', type=float, default=2.0, help='Time allowed for performing search games for each episode')
+    parser.add_argument('--search_games', type=int, default=500, help='The number of search games to be simulated for each root state. Used when search_time <= 0.')
     parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
     parser.add_argument('--c', type=float, default=1.0, help='Exploration constant for the tree policy')
 

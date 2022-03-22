@@ -32,13 +32,13 @@ class HEXVisualizer:
         self.line_pairs = self.get_line_pairs(self.diag_points)
         
 
-
         pygame.init()
         pygame.display.set_caption('HEX')
+        self.font = pygame.font.SysFont(None, 24)
 
         self.screen_initialized = False
     
-    def draw_board(self, board, chain=None):
+    def draw_board(self, board, player, chain=None):
         if not self.screen_initialized:
             self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
             self.screen_initialized = True
@@ -47,11 +47,14 @@ class HEXVisualizer:
         pygame.draw.rect(self.screen, self.WHITE, pygame.Rect(0, 0, self.WIDTH, self.HEIGHT))
 
         # Write text
-        font = pygame.font.SysFont(None, 24)
-        img1 = font.render(f'Player 1', True, self.PLAYER1_COLOR)
-        img2 = font.render(f'Player 2', True, self.PLAYER2_COLOR)
+
+        img1 = self.font.render('Player 1', True, self.PLAYER1_COLOR)
+        img2 = self.font.render('Player 2', True, self.PLAYER2_COLOR)
         self.screen.blit(img1, (10, 20))
         self.screen.blit(img2, (10, 40))
+
+        arrow = self.font.render('<-', True, self.BLACK)
+        self.screen.blit(arrow, (80, 20 if player == 1 else 40))
 
         # Draw lines connecting points
         for pair in self.line_pairs:
@@ -77,9 +80,6 @@ class HEXVisualizer:
                     pygame.draw.circle(self.screen, self.PLAYER1_COLOR, point, self.piece_radius)
                 elif player == -1:
                     pygame.draw.circle(self.screen, self.PLAYER2_COLOR, point, self.piece_radius)
-        
-        
-
 
 
         pygame.display.flip()

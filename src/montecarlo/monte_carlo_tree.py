@@ -11,9 +11,12 @@ class MonteCarloTree:
         self.action_space = action_space
         self.c = c
 
+        self.expansion_threshold = 5
+
         self.root = None
 
         self.vis_counter = 0
+
     
     def set_root(self, state):
         if isinstance(state, Node):
@@ -76,7 +79,7 @@ class MonteCarloTree:
                 child_selected_index = np.argmin([q - u for q, u in zip(Qs, us)])
             curr_node = curr_node.children[child_selected_index]
         
-        if curr_node.N == 0:
+        if curr_node.N < self.expansion_threshold:
             return curr_node
         else:
             has_expanded = self.expand_node(curr_node, sm)
@@ -84,7 +87,15 @@ class MonteCarloTree:
                 return curr_node
             return np.random.choice(curr_node.children)
 
-
+    def rollout(self, agent, sm: StateManager, leaf: Node):
+        state = leaf.state
+        while not sm.is_final(state): # Rollout to final state
+            legal_moves = sm.get_legal_moves(state)
+            action = agent.choose_action(state, legal_moves) 
+            state = sm.get_successor(state, action)
+        winner = sm.get_winner(state)
+        Z = winner
+        return Z
 
     def backpropagate(self, leaf, Z):
         curr_node = leaf

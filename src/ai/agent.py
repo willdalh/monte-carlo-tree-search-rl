@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import logging
 
 from statemanagers.state_manager import StateManager
+from statemanagers.hex_state_manager import HEXStateManager
 
 from .model import Model
 from .replay_buffer import ReplayBuffer, ReplayBufferTensor
@@ -61,8 +62,16 @@ class Agent:
             self.epsilon *= self.epsilon_decay
         return mean_loss
 
-    def store_case(self, case):
+    def store_case(self, case, sm: StateManager):
         self.buffer.store_case(case)
+        
+        if isinstance(sm, HEXStateManager):
+            state, D = case
+            symmetric_state = state[-sm.K * sm.K:][::-1] # Rotate 180 degrees
+            symmetric_state.insert(0, state[0]) # Insert current player
+            symmetric_D = D[::-1] # Rotate 180 degrees
+            self.buffer.store_case((symmetric_state, symmetric_D))
+            
 
     def choose_action(self, state, legal_moves, debug=False):
         action = None
@@ -81,15 +90,6 @@ class Agent:
 
         return action
 
-    def rollout(self, sm: StateManager, leaf):
-        state = leaf.state
-        while not sm.is_final(state): # Rollout to final state
-            legal_moves = sm.get_legal_moves(state)
-            action = self.choose_action(state, legal_moves) 
-            state = sm.get_successor(state, action)
-        winner = sm.get_winner(state)
-        Z = winner
-        return Z
     
     def load_model(self, path):
         self.anet.load_model(path)

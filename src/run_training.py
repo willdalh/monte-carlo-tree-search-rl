@@ -30,17 +30,26 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             # Initialize monte carlo game board to same state as root
             # mct.expand_to_depth(sm)
 
-            for g in range(NUM_SEARCH_GAMES):
-                # Tree policy
-                leaf = mct.tree_search_expand(sm)
-                Z = agent.rollout(sm, leaf)
-                mct.backpropagate(leaf, Z)
-
+            if args.search_time <= 0:
+                for g in range(NUM_SEARCH_GAMES):
+                    # Tree policy
+                    leaf = mct.tree_search_expand(sm)
+                    Z = mct.rollout(agent, sm, leaf)
+                    mct.backpropagate(leaf, Z)
+            else:
+                start_time = time.time()
+                search_games = 0
+                while time.time() - start_time < args.search_time:
+                    leaf = mct.tree_search_expand(sm)
+                    Z = mct.rollout(agent, sm, leaf)
+                    mct.backpropagate(leaf, Z)
+                    search_games += 1
+            
             # mct.visualize()
             # quit()
             D = mct.get_visit_distribution()
             
-            agent.store_case((state, D))
+            agent.store_case((state, D), sm)
             action = np.argmax(D)
             
             child_selected = None

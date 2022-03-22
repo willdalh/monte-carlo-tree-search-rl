@@ -52,7 +52,7 @@ class NIMStateManager(StateManager):
         return 2
 
     def flip_state(self, state):
-        return state
+        return state[0], state[1]
 
     def render_state(self, state):
         print(f'State is {state}')
