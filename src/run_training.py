@@ -23,6 +23,41 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
 
         state = sm.get_initial_state()
 
+        study = False
+        study_states = [
+            [-1, *list(np.array([
+                [ 0,  0,  1,  0,  0],
+                [ 0,  1, -1,  1,  0],
+                [-1, -1, -1, -1,  0],
+                [ 1,  1,  0,  0,  0],
+                [ 1, -1,  0,  0,  1]
+            ]).ravel())],
+
+            [1, *list(np.array([
+                [ 0,  0,  1,  0,  0],
+                [ 0,  1, -1,  0,  1],
+                [-1, -1, -1, -1,  0],
+                [ 1,  1,  0,  0,  0],
+                [ 1, -1,  0,  0,  0]
+            ]).ravel())],
+
+            [1, *list(np.array([
+                [-1, -1, 0],
+                [0, 0, 0], 
+                [0, 1, 1]
+            ]).ravel())],
+
+            [-1, *list(np.array([
+                [-1, -1, 0],
+                [0, 1, 0], 
+                [0, 1, 1]
+            ]).ravel())]
+
+        ]
+        if study:
+            state = study_states[3]
+            
+
         mct.set_root(state)
         mct.expand_node(mct.root, sm)
 
@@ -42,10 +77,16 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                     Z = mct.rollout(agent, sm, leaf)
                     mct.backpropagate(leaf, Z)
                     search_games += 1
+                # print(f'Search games done: {search_games}')
 
-            # mct.visualize()
+            if study:
+                mct.visualize(depth=1)
+                print(mct.get_visit_distribution().reshape(sm.K, sm.K))
+                sm.render_state(state)
+                quit()
             
-            
+            mct.visualize(depth=1)
+            # sm.render_state(state)
             # count += 1
             # if count == 7:
             # mct.visualize()
@@ -63,7 +104,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             mct.set_root(child_selected)
             state = mct.root.state
 
-        # quit()
+        quit()
         # Train ANET on a random minibatch of cases from ReplayBuffer
         mean_loss = agent.train_on_buffer_batch(debug=NUM_EPISODES - e < 30)
 

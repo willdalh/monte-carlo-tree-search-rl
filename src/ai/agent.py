@@ -14,11 +14,13 @@ import time
 
 
 class Agent:
-    def __init__(self, buffer_size, batch_size, lr, nn_dim, optimizer, epsilon_decay, state_size, action_space_size, **_):
+    def __init__(self, buffer_size, batch_size, lr, nn_dim, optimizer, epsilon_decay, pre_trained_path, state_size, action_space_size, **_):
         self.batch_size = batch_size
         # self.buffer = ReplayBuffer(buffer_size)
         self.buffer = ReplayBufferTensor(buffer_size, state_size, action_space_size)
         self.anet = Model(nn_dim=nn_dim, optimizer_name=optimizer, lr=lr)
+        if pre_trained_path != None:
+            self.anet.load_model(pre_trained_path)
         logging.debug('Anet initialized to:')
         logging.debug(self.anet.to_string())
 
@@ -60,18 +62,26 @@ class Agent:
         self.cross_losses.append(mean_loss)
         if self.epsilon > self.min_epsilon:
             self.epsilon *= self.epsilon_decay
+
+        with torch.no_grad():
+            logging.debug('')
+            logging.debug(f'state: {states[0]}')
+            logging.debug(f'pred dist: {F.softmax(prediction[0], dim=0)}')
+            logging.debug(f'tar: {targets[0]}')
+        
         return mean_loss
 
     def store_case(self, case, sm: StateManager):
         state, D = case
         curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
-        self.buffer.store_case((flipped_state, D))
+        flipped_D = sm.flip_distribution(D, state_was_flipped)
+        self.buffer.store_case((flipped_state, flipped_D))
         
         if isinstance(sm, HEXStateManager):
             symmetric_state = flipped_state[::-1] # Rotate 180 degrees
-            # symmetric_state.insert(0, state[0]) # Insert current player
-            symmetric_D = D[::-1] # Rotate 180 degrees
-            self.buffer.store_case((symmetric_state, symmetric_D))
+            if symmetric_state != flipped_state: # Do not bother to store same case twice (Happens when one piece is placed in the middle)
+                symmetric_D = flipped_D[::-1] # Rotate 180 degrees
+                self.buffer.store_case((symmetric_state, symmetric_D))
             
 
     def choose_action(self, state, legal_moves, debug=False):
@@ -117,6 +127,8 @@ class Agent:
 
 
     def present_results(self, log_dir):
+        torch.save(self.buffer.states, f'{log_dir}/buffer_states.pt')
+        torch.save(self.buffer.targets, f'{log_dir}/buffer_targets.pt')
         logging.debug(f'Exploits done: {self.exploits_done}')
         logging.debug(f'Replay histogram:\n{self.buffer.get_histogram()}')
         logging.debug(f'Accuracy on replay buffer is: {self.get_accuracy_on_buffer()}')
@@ -127,6 +139,7 @@ class Agent:
         plt.title('Cross-entropy loss')
         plt.savefig(f'{log_dir}/cross_loss.png', dpi=300)
         plt.show()
+
 
 
 class PreTrainedAgent:

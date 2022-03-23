@@ -48,13 +48,15 @@ class TOPP:
             for j, agent2 in enumerate(self.agents[i+1:], i+1):
                 print(i, j)
                 has_rendered = False
+        
                 for g in range(self.num_games):
                     # render = agent1.index != last and self.game_name == 'hex' and False 
                     # render = agent1.index == 0 and agent2.index == 9
-                    render = agent2.index == 9 and not has_rendered
+                    render = agent2.index == 15 and not has_rendered and False
                     switch = False
                     if alternate:
-                        switch = np.random.choice([True, False])
+                        # switch = np.random.choice([True, False])
+                        switch = g%2 == 0
 
                     if switch:
                         if render:
@@ -107,9 +109,9 @@ class TOPP:
         self.state_counts[t_state] += 1
 
     def present_results(self):
-        print('State counts')
-        for key, val in self.state_counts.items():
-            print(f'{list(key)}: {val}')
+        # print('State counts')
+        # for key, val in self.state_counts.items():
+        #     print(f'{list(key)}: {val}')
             
         plt.title('Win frequency')
         plt.bar(np.arange(len(self.agents)), self.wins/(self.num_games * (len(self.agents) - 1)))

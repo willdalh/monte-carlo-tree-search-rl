@@ -44,18 +44,29 @@ class ReplayBuffer:
         
 class ReplayBufferTensor:
     def __init__(self, max_size, state_size, action_space_size):
-        self.states = torch.zeros(max_size, state_size)
-        self.targets = torch.zeros(max_size, action_space_size)
+        self.state_size = state_size
+        self.action_space_size = action_space_size
+        self.states = torch.zeros(0, state_size)
+        self.targets = torch.zeros(0, action_space_size)
+        self.expansion_size = 200
         self.max_size = max_size
         self.cases_added = 0
 
+
     def store_case(self, case):
+        if self.cases_added >= self.states.shape[0]:
+            self._expand_buffers()
         state, target = case
         for i in range(len(state)):
             self.states[self.cases_added%self.max_size, i] = state[i]
         for i in range(len(target)):
             self.targets[self.cases_added%self.max_size, i] = target[i]
         self.cases_added += 1
+
+    def _expand_buffers(self):
+        if self.states.shape[0] < self.max_size:
+            self.states = torch.cat([self.states, torch.zeros(self.expansion_size, self.state_size)], dim=0)
+            self.targets = torch.cat([self.targets, torch.zeros(self.expansion_size, self.action_space_size)], dim=0)
 
     def sample(self, batch_size):
         if batch_size > self.cases_added:

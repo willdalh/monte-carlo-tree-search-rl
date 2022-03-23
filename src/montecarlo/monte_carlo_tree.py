@@ -127,18 +127,20 @@ class MonteCarloTree:
         return final_dist
 
 
-    def visualize(self):
+    def visualize(self, depth=-2, state_as_grid=False):
         self.nodes_created = 0
         vis_tree = graphviz.Graph(name='Monte Carlo Tree', filename=f'TREES/monte_carlo_tree_{self.vis_counter}.gv')
         self.vis_counter += 1
-        self.visualize_node(vis_tree, self.root, parent_node_name=None, edge_label=None, add_text=self.root.N)
+        self.visualize_node(vis_tree, self.root, parent_node_name=None, edge_label=None, add_text=self.root.N, depth=depth, state_as_grid=state_as_grid)
         print(f'Nodes visualized: {self.nodes_created}')
         vis_tree.render(view=True)
     
-    def visualize_node(self, vis_tree, node, parent_node_name, edge_label, add_text):
+    def visualize_node(self, vis_tree, node, parent_node_name, edge_label, add_text, depth, state_as_grid):
+        if depth == -1:
+            return
         self.nodes_created += 1
         name= f'node_{np.random.rand()}'
-        label = f'{node.state}'
+        label = f'{node.state}' if state_as_grid == False else f'{node.state}' #TODO
         if add_text != None:
             label = f'{label}\n{add_text}'
         # if node.state[0] == 1:
@@ -146,14 +148,14 @@ class MonteCarloTree:
         # elif node.state[0] == 2:
         #     vis_tree.attr('node', shape='invtriangle')
         if node.state[0] == 1:
-            vis_tree.node(name=name, label=label)
+            vis_tree.node(name=name, label=label, style='filled', color='#000000' if len(node.children) > 0 else '#20bf6b', fillcolor='#ffffff')
         else:
-            vis_tree.node(name=name, label=label, style='filled', color='#dddddd')
+            vis_tree.node(name=name, label=label, style='filled', color='#000000' if len(node.children) > 0 else '#20bf6b', fillcolor='#dddddd')
         if parent_node_name != None:
             vis_tree.edge(tail_name=parent_node_name, head_name=name, label=edge_label)
         
         
         for child, n, e, q, u in zip(node.children, node.Ns, node.Es, node.get_Qs(), node.get_us()):
             value = q + u if node.state[0] == 1 else q - u
-            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action}', add_text=f'{n}\nE: {e} Q: {q: 0.3f}\nV: {value: 0.3f}')
+            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action}', add_text=f'{n}\nE: {e} Q: {q: 0.3f}\nV: {value: 0.3f}', depth=depth-1, state_as_grid=state_as_grid)
         

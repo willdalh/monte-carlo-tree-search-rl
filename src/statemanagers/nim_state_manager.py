@@ -57,6 +57,9 @@ class NIMStateManager(StateManager):
     def flip_action(self, action, state_was_flipped):
         return action
 
+    def flip_distribution(self, D, state_was_flipped):
+        return D
+
     # def get_symmetric_cases(self, case):
     #     state, 
 

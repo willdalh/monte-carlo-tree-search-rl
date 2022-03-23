@@ -148,6 +148,11 @@ class HEXStateManager(StateManager):
             return r * self.K + c
         return action
 
+    def flip_distribution(self, D, state_was_flipped):
+        if state_was_flipped:
+            return D.reshape(self.K, self.K).T.ravel()
+        return D
+        
     def render_state(self, state, chain=None):
         board = np.array(state[1:]).reshape(self.K, self.K)
         self.visualizer.draw_board(board, player=state[0], chain=chain)
