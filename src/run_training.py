@@ -78,14 +78,15 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                     Z = mct.rollout(agent, sm, leaf)
                     mct.backpropagate(leaf, Z)
                     search_games += 1
-                # print(f'Search games done: {search_games}')
+                if e < 5:
+                    logging.debug(f'Episode {e} - search games done: {search_games}')
 
             if study:
                 if args.display:
                     mct.visualize(depth=1)
-                    sm.render_state(state)
+                    # sm.render_state(state)
                 print(mct.get_visit_distribution().reshape(sm.K, sm.K))
-                quit()
+               
             
             # if args.display:
             #     mct.visualize(depth=1)

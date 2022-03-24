@@ -42,7 +42,7 @@ class TOPP:
         # print(dist.reshape(4, 4))
 
 
-    def run(self, alternate=False):
+    def run(self, alternate=True):
         last = -1
         for i, agent1 in enumerate(self.agents[:-1]):
             for j, agent2 in enumerate(self.agents[i+1:], i+1):
@@ -57,6 +57,7 @@ class TOPP:
                     if alternate:
                         # switch = np.random.choice([True, False])
                         switch = g%2 == 0
+                    # switch = True
 
                     if switch:
                         if render:

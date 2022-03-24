@@ -1,9 +1,9 @@
 #!/bin/sh
 #SBATCH --partition=CPUQ
 #SBATCH --account=ie-idi
-#SBATCH --time=00:30:00
+#SBATCH --time=04:30:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=8
+#SBATCH --ntasks-per-node=32
 #SBATCH --mem=12000
 #SBATCH --job-name="mcts"
 #SBATCH --output=job_output.out
@@ -26,7 +26,7 @@ module purge
 module load Anaconda3/2020.07
 pip install graphviz
 pip install pygame
-python main.py --episodes 100 --search_games 500 --hex_k 3 --display False
-# python main.py --search_games 0 --search_games 1500 --game HEX --hex_k 5 --episodes 600 --num_anet_saves 20 --epsilon_decay 0.992 --lr 0.0009 --nn_dim 412,relu,412,relu --display False
+# python main.py --episodes 100 --search_games 500 --hex_k 3 --display False
+python main.py --search_games 0 --search_time 2 --game HEX --hex_k 5 --episodes 600 --num_anet_saves 20 --epsilon_decay 0.992 --lr 0.0009 --nn_dim 412,relu,412,relu --display False
 
 uname -a

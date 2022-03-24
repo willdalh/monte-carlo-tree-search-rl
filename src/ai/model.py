@@ -26,7 +26,7 @@ class Model(nn.Module):
         
 
     def forward(self, x):
-        return F.softmax(self.net(x.float()), dim=1)
+        return F.softmax(self.logits(x), dim=1)
 
     def logits(self, x):
         return self.net(x.float())
@@ -55,7 +55,7 @@ class Model(nn.Module):
             param_count += torch.flatten(layer.data).shape[0]
 
         
-        return string + f'\nNumber of parameters: {param_count}'
+        return string + f'Number of parameters: {param_count}'
 
     def save_model(self, path, name):
         '''Save the model parameters to file'''
@@ -122,3 +122,7 @@ class Model(nn.Module):
 #     def __init__(self, nn_dim):
 #         layers = Model.generate_layers(nn_dim)
 
+
+if __name__ == '__main__':
+    nn_dim = '9,256,relu,256,relu,9'
+    Model.generate_layers(nn_dim)
