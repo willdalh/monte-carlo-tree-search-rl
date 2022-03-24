@@ -48,12 +48,12 @@ class Agent:
             self.anet.optimizer.step()
             self.anet.optimizer.zero_grad()
 
-            if debug:
-                with torch.no_grad():
-                    logging.debug('')
-                    logging.debug(f'state: {states[0]}')
-                    logging.debug(f'pred dist: {F.softmax(prediction[0], dim=0)}')
-                    logging.debug(f'tar: {targets[0]}')
+            # if debug:
+            #     with torch.no_grad():
+            #         logging.debug('')
+            #         logging.debug(f'state: {states[0]}')
+            #         logging.debug(f'pred dist: {F.softmax(prediction[0], dim=0)}')
+            #         logging.debug(f'tar: {targets[0]}')
         
             with torch.no_grad():
                 losses.append(loss.item())
@@ -63,11 +63,11 @@ class Agent:
         if self.epsilon > self.min_epsilon:
             self.epsilon *= self.epsilon_decay
 
-        with torch.no_grad():
-            logging.debug('')
-            logging.debug(f'state: {states[0]}')
-            logging.debug(f'pred dist: {F.softmax(prediction[0], dim=0)}')
-            logging.debug(f'tar: {targets[0]}')
+        # with torch.no_grad():
+        #     logging.debug('')
+        #     logging.debug(f'state: {states[0]}')
+        #     logging.debug(f'pred dist: {F.softmax(prediction[0], dim=0)}')
+        #     logging.debug(f'tar: {targets[0]}')
         
         return mean_loss
 
