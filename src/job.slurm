@@ -26,6 +26,6 @@ module purge
 module load Anaconda3/2020.07
 pip install graphviz
 pip install pygame
-python main.py --log_dir train_log_test --hex_k 3 --episodes 100 --search_games 500 --lr 0.001 --epsilon_decay 0.97 --display False
+python main.py --search_games 0 --search_time 2 --game HEX --hex_k 5 --episodes 600 --num_anet_saves 20 --epsilon_decay 0.992 --lr 0.0009 --nn_dim 412,relu,412,relu
 
 uname -a
