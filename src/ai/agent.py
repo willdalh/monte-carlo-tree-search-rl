@@ -126,7 +126,7 @@ class Agent:
         return acc.item()
 
 
-    def present_results(self, log_dir):
+    def present_results(self, log_dir, display):
         torch.save(self.buffer.states, f'{log_dir}/buffer_states.pt')
         torch.save(self.buffer.targets, f'{log_dir}/buffer_targets.pt')
         logging.debug(f'Exploits done: {self.exploits_done}')
@@ -134,11 +134,11 @@ class Agent:
         logging.debug(f'Accuracy on replay buffer is: {self.get_accuracy_on_buffer()}')
         
         # print('\nLength of buffer:', len(self.buffer.buffer))
-        # plt.plot(np.arange(len(self.mse_losses)), np.array(self.mse_losses))
         plt.plot(np.arange(len(self.cross_losses)), np.array(self.cross_losses))
         plt.title('Cross-entropy loss')
         plt.savefig(f'{log_dir}/cross_loss.png', dpi=300)
-        plt.show()
+        if display:
+            plt.show()
 
 
 

@@ -85,7 +85,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                 sm.render_state(state)
                 quit()
             
-            mct.visualize(depth=1)
+            # mct.visualize(depth=1)
             # sm.render_state(state)
             # count += 1
             # if count == 7:
@@ -104,7 +104,6 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             mct.set_root(child_selected)
             state = mct.root.state
 
-        quit()
         # Train ANET on a random minibatch of cases from ReplayBuffer
         mean_loss = agent.train_on_buffer_batch(debug=NUM_EPISODES - e < 30)
 
@@ -120,7 +119,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     print(f'Time used for training: {toc-tic} seconds')
 
     # Verification
-    agent.present_results(args.log_dir)
+    agent.present_results(args.log_dir, args.display)
     agent.epsilon = 0
     for e in range(4):
         logging.debug(f'Round {e}')

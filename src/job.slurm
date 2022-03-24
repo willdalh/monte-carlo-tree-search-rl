@@ -24,6 +24,6 @@ echo "Starting script"
 echo ""
 module purge
 module load Anaconda3/2020.07
-python main.py --log_dir train_log_test --hex_k 3 --episodes 100 --search_games 500 --lr 0.001 --epsilon_decay 0.97
+python main.py --log_dir train_log_test --hex_k 3 --episodes 100 --search_games 500 --lr 0.001 --epsilon_decay 0.97 --display False
 
 uname -a
