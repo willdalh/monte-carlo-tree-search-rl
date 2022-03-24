@@ -16,6 +16,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     tic = time.time()
 
     for e in range(NUM_EPISODES + 1):
+        logging.debug(f'Running episode {e}')
         if e%(int(NUM_EPISODES/(NUM_ANET_SAVES - 1))) == 0:
             agent.anet.save_model(f'{args.log_dir}/models', f'anet_{e}.pt')
         if e == NUM_EPISODES:
@@ -110,6 +111,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
 
         
         # print('End of episode')
+        logging.debug(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon:0.5f} loss={mean_loss:0.4f} buffersize={agent.buffer.cases_added}')
         if e%(int(NUM_EPISODES/40)) == 0:
             print(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon:0.5f} loss={mean_loss:0.4f} buffersize={agent.buffer.cases_added}')
 
