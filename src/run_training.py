@@ -80,17 +80,18 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                 # print(f'Search games done: {search_games}')
 
             if study:
-                mct.visualize(depth=1)
+                if args.display:
+                    mct.visualize(depth=1)
+                    sm.render_state(state)
                 print(mct.get_visit_distribution().reshape(sm.K, sm.K))
-                sm.render_state(state)
                 quit()
             
-            # mct.visualize(depth=1)
-            # sm.render_state(state)
+            # if args.display:
+            #     mct.visualize(depth=1)
+            #     sm.render_state(state)
             # count += 1
             # if count == 7:
-            # mct.visualize()
-            # quit()
+
             D = mct.get_visit_distribution()
             
             agent.store_case((state, D), sm)
