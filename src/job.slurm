@@ -27,6 +27,6 @@ module load Anaconda3/2020.07
 pip install graphviz
 pip install pygame
 # python main.py --episodes 100 --search_games 500 --hex_k 3 --display False
-python main.py --search_games 0 --search_time 2 --game HEX --hex_k 5 --episodes 600 --num_anet_saves 20 --epsilon_decay 0.992 --lr 0.0009 --nn_dim 412,relu,412,relu --display False
-
+# python main.py --search_games 0 --search_time 2 --game HEX --hex_k 5 --episodes 600 --num_anet_saves 20 --epsilon_decay 0.992 --lr 0.0009 --nn_dim 412,relu,412,relu --display False
+python main.py --search_games 0 --search_time 2.5 --game HEX --hex_k 7 --episodes 200 --num_anet_saves 20 --epsilon_decay 0.995 --lr 0.0018 --nn_dim 'conv(c3),relu,400,relu'
 uname -a

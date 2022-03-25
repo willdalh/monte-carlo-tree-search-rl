@@ -113,7 +113,7 @@ if __name__ == '__main__':
     parser.add_argument('--search_games', type=int, default=500, help='The number of search games to be simulated for each root state.')
     parser.add_argument('--search_time', type=float, default=0.5, help='Time allowed for performing search games for each episode. Used when search_games <= 0.')
     parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
-    parser.add_argument('--c', type=float, default=0.7, help='Exploration constant for the tree policy')
+    parser.add_argument('--c', type=float, default=1.0, help='Exploration constant for the tree policy')
 
     # ANET and Agent parameters
     parser.add_argument('--buffer_size', type=int, default=500000, help='The maximum size of the replay buffer')
@@ -138,7 +138,6 @@ if __name__ == '__main__':
     ns_args.saved_dir = f'../logs/{ns_args.saved_dir}'
 
     print(f'Arguments:\n{ns_args}\n')
-
     main(ns_args)
 
     '''
@@ -175,5 +174,8 @@ if __name__ == '__main__':
     
     python main.py --search_games 0 --search_time 2 --game HEX --hex_k 5 --episodes 600 --num_anet_saves 20 --epsilon_decay 0.992 --lr 0.0009 --nn_dim 412,relu,412,relu
     
+
+    TRY THESE:
+    python main.py --search_games 0 --search_time 1 --game HEX --hex_k 3 --episodes 100 --num_anet_saves 20 --epsilon_decay 0.99 --lr 0.001 --nn_dim 'conv(c5),relu,400,relu'
     
     '''
