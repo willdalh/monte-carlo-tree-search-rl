@@ -1,19 +1,25 @@
+import time
 import numpy as np
 import torch
 import torch.nn.functional as F
 from .node import Node
 from statemanagers.state_manager import StateManager
 import graphviz
+import torch.multiprocessing as tmp
 
 class MonteCarloTree:
-    def __init__(self, max_depth, c, action_space, **_):
+    def __init__(self, max_depth, c, use_mp, action_space, **_):
         self.max_depth = max_depth
         self.action_space = action_space
         self.c = c
-
         self.expansion_threshold = 0
-
         self.root = None
+
+        # Multiprocessing
+        self.use_mp = use_mp
+        self.cpu_count = tmp.cpu_count()
+        # self.processes = [None for i in range(self.cpu_count)]
+        # self.q = tmp.Manager().Queue()
 
         self.vis_counter = 0
 
@@ -64,6 +70,37 @@ class MonteCarloTree:
 
     #     return curr_node
 
+    # def perform_search_game(self, sm: StateManager, agent):
+    #     leaf = self.tree_search_expand(sm)
+    #     processes = []
+    #     if self.use_mp:
+    #         for i in range(self.cpu_count):
+    #             p = tmp.Process(target=self.fake_method, args=(i, q))
+    #             processes.append(p)
+    #         for p in processes:
+    #             p.start()
+            
+    #         Zs = []
+    #         for p in processes:
+    #             p.join()
+    #             Z = q.get()
+    #             Zs.append(Z)
+    #             del Z
+    #         self.backpropagate(leaf, Zs)
+
+    #     else:
+    #         Z = self.rollout(agent, sm, leaf)
+    #         self.backpropagate(leaf, Z)
+
+    def fake_method(self, number, q):
+        np.random.seed()
+        number += 1
+        result = np.random.randint(-1, 2)
+        if self.use_mp:
+            q.put(result)
+            return
+        return result
+
     def tree_search_expand(self, sm: StateManager):
         '''Tree traversal as shown by John Levine on YouTube'''
         curr_node = self.root
@@ -87,33 +124,58 @@ class MonteCarloTree:
                 return curr_node
             return np.random.choice(curr_node.children)
 
+    # def rollout(self, leaf: Node):
+    #     state = leaf.state
+    #     while not self.sm.is_final(state): # Rollout to final state
+    #         curr_player, flipped_state, state_was_flipped = self.sm.flip_state(state)
+    #         legal_moves = self.sm.get_legal_moves([curr_player, *flipped_state])
+    #         action = self.agent.choose_action(flipped_state, legal_moves) 
+    #         action = self.sm.flip_action(action, state_was_flipped)
+    #         state = self.sm.get_successor(state, action)
+    #     winner = self.sm.get_winner(state)
+    #     Z = winner
+    #     return Z
+
     def rollout(self, agent, sm: StateManager, leaf: Node):
         state = leaf.state
         while not sm.is_final(state): # Rollout to final state
+            # print('\nNEW ROUND')
+            # sm.render_state(state)
             curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
-            # print('\n')
-            # print(f'Player: {curr_player}')
-            # print(f'state: {state}')
-            # print(f'flipped: {flipped_state}')
+            # print('Flipped')
             legal_moves = sm.get_legal_moves([curr_player, *flipped_state])
             action = agent.choose_action(flipped_state, legal_moves) 
-            # print(f'action: {action}')
+            # print(f'Chosen action: {action}')
             action = sm.flip_action(action, state_was_flipped)
-            # print(f'flipped action: {action}')
+            # print(f'Flipped action: {action}')
+            # sm.render_state([curr_player, *flipped_state])
             state = sm.get_successor(state, action)
         winner = sm.get_winner(state)
         Z = winner
         return Z
 
-    def backpropagate(self, leaf, Z):
+    def rollout_mp(self, args):
+        agent, sm, leaf = args
+        np.random.seed()
+        Z = self.rollout(agent, sm, leaf)
+        # q.put(Z)
+        return Z
+
+
+    def backpropagate(self, leaf, Zs):
+        if not isinstance(Zs, list):
+            Zs = [Zs]
+        Zs_len = len(Zs)
+        Zs_sum = sum(Zs)
         curr_node = leaf
-        curr_node.N += 1
+        curr_node.N += Zs_len
+
         while curr_node.parent != None: # Propagate upwards until root is reached
             parent = curr_node.parent
             child_index = parent.children.index(curr_node)
-            parent.N += 1
-            parent.Ns[child_index] += 1
-            parent.Es[child_index] += Z
+            parent.N += Zs_len
+            parent.Ns[child_index] += Zs_len
+            parent.Es[child_index] += Zs_sum
             curr_node = parent
         
     def get_visit_distribution(self):
@@ -159,3 +221,23 @@ class MonteCarloTree:
             value = q + u if node.state[0] == 1 else q - u
             self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action}', add_text=f'{n}\nE: {e} Q: {q: 0.3f}\nV: {value: 0.3f}', depth=depth-1, state_as_grid=state_as_grid)
         
+
+class Roller:
+    def __init__(self, sm):
+        self.sm = sm
+    
+    def rollout(self, args):
+        # print(args)
+        agent, leaf = args
+        state = leaf.state
+        while not self.sm.is_final(state): # Rollout to final state
+            curr_player, flipped_state, state_was_flipped = self.sm.flip_state(state)
+            legal_moves = self.sm.get_legal_moves([curr_player, *flipped_state])
+            action = agent.choose_action(flipped_state, legal_moves) 
+            action = self.sm.flip_action(action, state_was_flipped)
+            # print(f'Flipped action: {action}')
+            # sm.render_state([curr_player, *flipped_state])
+            state = self.sm.get_successor(state, action)
+        winner = self.sm.get_winner(state)
+        Z = winner
+        return Z

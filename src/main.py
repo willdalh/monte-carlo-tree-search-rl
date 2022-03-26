@@ -20,6 +20,7 @@ import torch.nn.functional as F
 
 def main(args):
     if not args.run_topp:
+        torch.set_num_threads(1)
         # Set up logging directory
         if not os.path.isdir('../logs'):
             os.mkdir('../logs')
@@ -114,6 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('--search_time', type=float, default=0.5, help='Time allowed for performing search games for each episode. Used when search_games <= 0.')
     parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
     parser.add_argument('--c', type=float, default=1.0, help='Exploration constant for the tree policy')
+    parser.add_argument('--use_mp', type=str_to_bool, default=False, help='')
 
     # ANET and Agent parameters
     parser.add_argument('--buffer_size', type=int, default=500000, help='The maximum size of the replay buffer')

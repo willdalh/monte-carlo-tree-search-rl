@@ -3,17 +3,26 @@ import torch
 import matplotlib.pyplot as plt
 import time
 import logging
+# import torch.multiprocessing as tmp
+import multiprocessing as tmp
 
 from ai.agent import Agent
 from statemanagers.state_manager import StateManager
-from montecarlo.monte_carlo_tree import MonteCarloTree
+from montecarlo.monte_carlo_tree import MonteCarloTree, Roller
 
 
 def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     NUM_EPISODES = args.episodes
-    NUM_SEARCH_GAMES = args.search_games
+    NUM_SEARCH_GAMES = args.search_games 
     NUM_ANET_SAVES = args.num_anet_saves
     tic = time.time()
+
+    if args.use_mp:
+        pass
+        # queue = tmp.Manager().Queue()
+        # processes = []
+        # pool = tmp.Pool(processes=None)
+        # roller = Roller(sm)
 
     for e in range(NUM_EPISODES + 1):
         logging.debug(f'Running episode {e}')
@@ -56,6 +65,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
 
         ]
         if study:
+            # pass
             state = study_states[3]
             
 
@@ -63,13 +73,13 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
         mct.expand_node(mct.root, sm)
 
         while not sm.is_final(state):
-
+            
             if args.search_games > 0:
                 for g in range(NUM_SEARCH_GAMES):
-                    # Tree policy
                     leaf = mct.tree_search_expand(sm)
                     Z = mct.rollout(agent, sm, leaf)
                     mct.backpropagate(leaf, Z)
+                    # print(g)
             else:
                 start_time = time.time()
                 search_games = 0
@@ -84,15 +94,9 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             if study:
                 if args.display:
                     mct.visualize(depth=1)
-                    # sm.render_state(state)
-                print(mct.get_visit_distribution().reshape(sm.K, sm.K))
+                    sm.render_state(state)
+                # print(mct.get_visit_distribution().reshape(sm.K, sm.K))
                
-            
-            # if args.display:
-            #     mct.visualize(depth=1)
-            #     sm.render_state(state)
-            # count += 1
-            # if count == 7:
 
             D = mct.get_visit_distribution()
             

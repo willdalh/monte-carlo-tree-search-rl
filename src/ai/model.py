@@ -29,7 +29,14 @@ class Model(nn.Module):
 
         od = OrderedDict(layers)
         self.net = nn.Sequential(od)
-        
+
+        # Test network
+        input_features = self.nn_dim[0]
+        test_tensor = torch.rand(10, input_features)
+        print('Testing network')
+        self.net(test_tensor)
+        print('Finished testing network')
+
         self.optimizer = None
         self.initialize_optimizer(optimizer_name)
         self.loss_fn = nn.CrossEntropyLoss()
@@ -107,6 +114,7 @@ class Model(nn.Module):
         Returns:
             List of tuples, where each tuple contains the name and an instantiated object of either a linear layer or an activation function
         '''
+        nn_dim = [e for e in nn_dim]
         structure = [e for e in nn_dim if isinstance(e, int)] # Get hidden layer sizes by filtering out activation functions
         layers = []
         layers_test = []
@@ -142,6 +150,7 @@ class Model(nn.Module):
         Returns:
             List of tuples, where each tuple contains the name and an instantiated object of either a linear layer or an activation function
         '''
+        nn_dim = [e for e in nn_dim]
         layers = []
         layers_test = []
 

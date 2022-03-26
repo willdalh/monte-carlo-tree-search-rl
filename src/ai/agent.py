@@ -109,12 +109,20 @@ class Agent:
         eps = self.epsilon
         decay = self.epsilon_decay
         count = 0
+        epsilon_series = []
         while eps > self.min_epsilon:
             eps *= decay
+            epsilon_series.append((count, eps))
             count += 1
-            if count%5 == 0:
+            # if count%5 == 0:
+                # print(f'count {count}: eps = {eps}')
+
+        # print(epsilon_series)
+        length = len(epsilon_series)
+        for i, (count, eps) in enumerate(epsilon_series):
+            if i%(length//15) == 0:
                 print(f'count {count}: eps = {eps}')
-        print(f'count {count}: eps = {eps}')
+        # print(f'count {count}: eps = {eps}')
 
 
     def get_accuracy_on_buffer(self):

@@ -34,8 +34,8 @@ class HEXVisualizer:
 
         pygame.init()
         pygame.display.set_caption('HEX')
-        self.font = pygame.font.SysFont(None, 24)
-        self.small_font = pygame.font.SysFont(None, 16)
+        # self.font = pygame.font.SysFont(None, 24)
+        # self.small_font = pygame.font.SysFont(None, 16)
 
         self.screen_initialized = False
     
@@ -48,13 +48,13 @@ class HEXVisualizer:
         pygame.draw.rect(self.screen, self.WHITE, pygame.Rect(0, 0, self.WIDTH, self.HEIGHT))
 
         # Write text
-
-        img1 = self.font.render('Player 1', True, self.PLAYER1_COLOR)
-        img2 = self.font.render('Player 2', True, self.PLAYER2_COLOR)
+        font = pygame.font.SysFont(None, 24)
+        img1 = font.render('Player 1', True, self.PLAYER1_COLOR)
+        img2 = font.render('Player 2', True, self.PLAYER2_COLOR)
         self.screen.blit(img1, (10, 20))
         self.screen.blit(img2, (10, 40))
 
-        arrow = self.font.render('<-', True, self.BLACK)
+        arrow = font.render('<-', True, self.BLACK)
         self.screen.blit(arrow, (80, 20 if player == 1 else 40))
 
         # Draw lines connecting points
@@ -68,6 +68,7 @@ class HEXVisualizer:
             for point, next_point in zip(points[:-1], points[1:]):
                 pygame.draw.line(self.screen, self.GOLD, point, next_point, width=10)
 
+        small_font = pygame.font.SysFont(None, 16)
         for i, (points, indices) in enumerate(zip(self.diag_points, self.diag_indices)): # Draw lines to above elements
             for j, (point, index) in enumerate(zip(points, indices)):
                 player = board[index]
@@ -75,15 +76,15 @@ class HEXVisualizer:
                 if player == 0:
                     pygame.draw.circle(self.screen, self.BLACK, point, self.piece_radius, width=3)
                     pygame.draw.circle(self.screen, self.WHITE, point, self.piece_radius - 3)
-                    index_text = self.small_font.render(f'{index[0] * self.K + index[1]}', True, self.BLACK)
+                    index_text = small_font.render(f'{index[0] * self.K + index[1]}', True, self.BLACK)
                     
                 elif player == 1:
                     pygame.draw.circle(self.screen, self.PLAYER1_COLOR, point, self.piece_radius)
-                    index_text = self.small_font.render(f'{index[0] * self.K + index[1]}', True, self.BLACK)
+                    index_text = small_font.render(f'{index[0] * self.K + index[1]}', True, self.BLACK)
                     
                 elif player == -1:
                     pygame.draw.circle(self.screen, self.PLAYER2_COLOR, point, self.piece_radius)
-                    index_text = self.small_font.render(f'{index[0] * self.K + index[1]}', True, self.WHITE)
+                    index_text = small_font.render(f'{index[0] * self.K + index[1]}', True, self.WHITE)
                 
                 index_text_rect = index_text.get_rect(center=point)
                 self.screen.blit(index_text, index_text_rect)

@@ -4,11 +4,12 @@ from ai.agent import PreTrainedAgent
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
 
 class TOPP:
     def __init__(self, game_name, model_paths, sm: StateManager, nn_dim, num_duel_games):
         self.game_name = game_name.lower()
-        self.agents = [PreTrainedAgent(path, nn_dim) for path in model_paths]
+        self.agents = [PreTrainedAgent(path, copy.deepcopy(nn_dim)) for path in model_paths]
         self.sm = sm
         self.num_games = num_duel_games
         for i, agent in enumerate(self.agents):
@@ -52,12 +53,12 @@ class TOPP:
                 for g in range(self.num_games):
                     # render = agent1.index != last and self.game_name == 'hex' and False 
                     # render = agent1.index == 0 and agent2.index == 9
-                    render = agent2.index == 15 and not has_rendered and False
+                    render = agent2.index == 19 and not has_rendered and False
                     switch = False
                     if alternate:
                         # switch = np.random.choice([True, False])
                         switch = g%2 == 0
-                    # switch = True
+                    # switc
 
                     if switch:
                         if render:
@@ -78,14 +79,15 @@ class TOPP:
             self.count_state(state) # Debug
 
             curr_player = state[0]
-
             player, flipped_state, state_was_flipped = self.sm.flip_state(state)
+            
             legal_moves = self.sm.get_legal_moves([player, *flipped_state])
             if curr_player == 1:
                 action = agent1.choose_action(flipped_state, legal_moves)
 
             if curr_player == -1:
                 action = agent2.choose_action(flipped_state, legal_moves)
+
             action = self.sm.flip_action(action, state_was_flipped)
 
             if render and self.game_name == 'hex':

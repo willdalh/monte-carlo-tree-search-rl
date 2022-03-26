@@ -154,5 +154,7 @@ class HEXStateManager(StateManager):
         return D
         
     def render_state(self, state, chain=None):
+        if self.visualizer == None:
+            self.visualizer = HEXVisualizer(self.K)
         board = np.array(state[1:]).reshape(self.K, self.K)
         self.visualizer.draw_board(board, player=state[0], chain=chain)
