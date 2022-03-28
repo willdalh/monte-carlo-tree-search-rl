@@ -5,3 +5,5 @@ TREES
 token.txt
 ActorClient.py
 server.crt
+online
+.env

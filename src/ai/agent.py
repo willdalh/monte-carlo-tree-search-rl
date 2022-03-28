@@ -8,15 +8,34 @@ from statemanagers.state_manager import StateManager
 from statemanagers.hex_state_manager import HEXStateManager
 
 from .model import Model
-from .replay_buffer import ReplayBuffer, ReplayBufferTensor
+from .replay_buffer import ReplayBufferTensor
 
-import time
 
 
 class Agent:
-    def __init__(self, buffer_size, batch_size, lr, nn_dim, optimizer, epsilon_decay, pre_trained_path, state_size, action_space_size, **_):
+    def __init__(self, buffer_size, batch_size, lr, nn_dim, optimizer, epsilon, epsilon_decay, pre_trained_path, state_size, action_space_size, **_):
+        '''
+        Initialize an agent.
+        The agent will always play from the perspective of player 1.
+
+        Args:
+            buffer_size: The size of the replay buffer.
+            batch_size: The size of the batch to be used for training.
+            lr: The learning rate for the ANET.
+            nn_dim: The structure of the ANET.
+            optimizer: A string indicating the optimizer to be used.
+            epsilon: The initial epsilon value.
+            epsilon_decay: The decay rate for epsilon every episode.
+            pre_trained_path: Path to a pre-trained model. If given, this model will be loaded.
+            state_size: The size of the state when excluding the player id.
+            action_space_size: The size of the action space.
+            _: Unused keyword arguments.
+        '''
+
         self.batch_size = batch_size
-        # self.buffer = ReplayBuffer(buffer_size)
+        self.epsilon = epsilon
+        self.epsilon_decay = epsilon_decay
+
         self.buffer = ReplayBufferTensor(buffer_size, state_size, action_space_size)
         self.anet = Model(nn_dim=nn_dim, optimizer_name=optimizer, lr=lr)
         if pre_trained_path != None:
@@ -24,21 +43,19 @@ class Agent:
         logging.debug('Anet initialized to:')
         logging.debug(self.anet.to_string())
 
-        self.epsilon = 1.0
-        self.epsilon_decay = epsilon_decay
-        self.min_epsilon = 0.01
         self.mse_losses = []
         self.cross_losses = []
         self.exploits_done = 0
+        self.min_epsilon = 0.01
 
         self.demonstrate_epsilon()
         
 
     def train_on_buffer_batch(self, epochs=10, debug=False):
+        '''
+        Retrieve a batch of cases from the replay buffer and train the ANET on them.'''
         losses = []
-        # if self.buffer.cases_added < 30: return -1
         for epoch in range(epochs):
-            
             states, targets = self.buffer.sample(self.batch_size)
             # targets = torch.argmax(targets, dim=1)
             prediction = self.anet.logits(states)
@@ -47,17 +64,10 @@ class Agent:
             loss.backward()
             self.anet.optimizer.step()
             self.anet.optimizer.zero_grad()
-
-            # if debug:
-            #     with torch.no_grad():
-            #         logging.debug('')
-            #         logging.debug(f'state: {states[0]}')
-            #         logging.debug(f'pred dist: {F.softmax(prediction[0], dim=0)}')
-            #         logging.debug(f'tar: {targets[0]}')
         
             with torch.no_grad():
                 losses.append(loss.item())
-                # self.mse_losses.append(F.mse_loss(prediction, target).item())
+ 
         mean_loss = np.mean(losses)
         self.cross_losses.append(mean_loss)
         if self.epsilon > self.min_epsilon:
@@ -72,40 +82,57 @@ class Agent:
         return mean_loss
 
     def store_case(self, case, sm: StateManager):
+        '''
+        Store a case in the replay buffer.
+
+        Args:
+            case: tuple of (state, distribution) where the state is from the perspecitve of player 1.
+            sm: The state manager.
+        '''
         state, D = case
-        curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
-        flipped_D = sm.flip_distribution(D, state_was_flipped)
-        self.buffer.store_case((flipped_state, flipped_D))
+        self.buffer.store_case((state, D))
         
         if isinstance(sm, HEXStateManager):
-            symmetric_state = flipped_state[::-1] # Rotate 180 degrees
-            if symmetric_state != flipped_state: # Do not bother to store same case twice (Happens when one piece is placed in the middle)
-                symmetric_D = flipped_D[::-1] # Rotate 180 degrees
+            symmetric_state = state[::-1] # Rotate 180 degrees
+            if symmetric_state != state: # Do not bother to store same case twice (Happens when one piece is placed in the middle and on initial state)
+                symmetric_D = D[::-1] # Rotate 180 degrees
                 self.buffer.store_case((symmetric_state, symmetric_D))
             
 
     def choose_action(self, state, legal_moves, debug=False):
+        '''
+        Choose an action to play from the perspective of player 1 using an epsilon-greedy policy.
+
+        Args:
+            state: The state of the game from the perspective of player 1. 
+            legal_moves: The legal moves from the current state.
+        
+        Returns:
+            The action to be played from the perspective of player 1.
+        '''
         action = None
-        if np.random.random() > self.epsilon: # exploit
+        if np.random.random() > self.epsilon: # Exploit
             dist = self.anet.forward(torch.Tensor([state]))[0]
-            for i in range(dist.shape[0]):
+            for i in range(dist.shape[0]): # Set the probability of illegal moves to 0
                 if i not in legal_moves:
                     dist[i] = 0.0
-            dist *= 1/dist.sum()
+            dist *= 1/dist.sum() # Rescale to sum to 1
             if debug:
                 logging.debug(f'dist: {dist}')
-            action = torch.argmax(dist).item()
+            action = torch.argmax(dist).item() # Choose the action with the highest probability
             self.exploits_done += 1
-        else: # explore
+        else: # Explore
             action = np.random.choice(legal_moves)
 
         return action
 
     
     def load_model(self, path):
+        '''Load a model from a file.'''
         self.anet.load_model(path)
 
     def demonstrate_epsilon(self):
+        '''For debugging purposes. Print how the epsilon value evolves.'''
         eps = self.epsilon
         decay = self.epsilon_decay
         count = 0
@@ -114,18 +141,15 @@ class Agent:
             eps *= decay
             epsilon_series.append((count, eps))
             count += 1
-            # if count%5 == 0:
-                # print(f'count {count}: eps = {eps}')
 
-        # print(epsilon_series)
         length = len(epsilon_series)
         for i, (count, eps) in enumerate(epsilon_series):
             if i%(length//15) == 0:
                 print(f'count {count}: eps = {eps}')
-        # print(f'count {count}: eps = {eps}')
 
 
     def get_accuracy_on_buffer(self):
+        '''Calculate the accuracy of the ANET on the replay buffer.'''
         states, targets = self.buffer.sample(self.buffer.cases_added)
         targets = torch.argmax(targets, dim=1)
         pred = self.anet.forward(states)
@@ -135,6 +159,7 @@ class Agent:
 
 
     def present_results(self, log_dir, display):
+        '''Present the results of the training session.'''
         torch.save(self.buffer.states, f'{log_dir}/buffer_states.pt')
         torch.save(self.buffer.targets, f'{log_dir}/buffer_targets.pt')
         logging.debug(f'Exploits done: {self.exploits_done}')
@@ -152,19 +177,35 @@ class Agent:
 
 class PreTrainedAgent:
     def __init__(self, model_path, nn_dim):
+        '''
+        Initialize a pre-trained agent.
+        
+        Args:
+            model_path: Path to a saved model.
+            nn_dim: The structure of the ANET.
+        '''
         self.anet = Model(nn_dim=nn_dim, optimizer_name='adam', lr=0.0000001)
         self.anet.load_model(model_path)
 
         self.index = -1
 
     def choose_action(self, state, legal_moves):
+        '''
+        Choose an action to play from the perspective of player 1. Same as in the Agent class, but this is only greedy.
+
+        Args:
+            state: The state of the game from the perspective of player 1.
+            legal_moves: The legal moves from the current state.
+        
+        Returns:
+            The action to be played from the perspective of player 1.
+        '''
         dist = self.anet.forward(torch.Tensor([state]))[0]
         for i in range(dist.shape[0]):
             if i not in legal_moves:
                 dist[i] = 0.0
         dist *= 1/dist.sum()
         action = torch.argmax(dist).item()
-
         return action
         
 
@@ -208,6 +249,18 @@ class PreTrainedAgent:
 
 # %%
 # %timeit -n 100 [i**2 for i in range(100000)]
+
+
+
+# %%
+# import numpy as np
+# state = [0, 1, 1, -1, 0, -1, 0, 1, -1]
+# K = 3
+# print('Time for flipping with Python')
+# %timeit -n 1000 [-v for i in range(K) for v in state[i::K]]
+
+# print('Time for flipping with Numpy')
+# %timeit -n 1000 (np.array(state).reshape(K, K).T.ravel() * - 1).tolist()
 
 
 

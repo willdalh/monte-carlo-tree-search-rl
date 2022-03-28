@@ -4,12 +4,11 @@ from ai.agent import PreTrainedAgent
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
 
 class TOPP:
     def __init__(self, game_name, model_paths, sm: StateManager, nn_dim, num_duel_games):
         self.game_name = game_name.lower()
-        self.agents = [PreTrainedAgent(path, copy.deepcopy(nn_dim)) for path in model_paths]
+        self.agents = [PreTrainedAgent(path, nn_dim) for path in model_paths]
         self.sm = sm
         self.num_games = num_duel_games
         for i, agent in enumerate(self.agents):
@@ -20,27 +19,6 @@ class TOPP:
         
         print(model_paths)
 
-        # TESTING
-        board = np.array([
-            [0, 0, 0, -1],
-            [0, -1, 1, 0],
-            [-1, 1, 0, 0],
-            [1, 0, 0, 0]
-        ])
-
-        # board = np.array([
-        #     [0, 0, 0, 1],
-        #     [0, -1, 0, -1],
-        #     [0, 1, 0, 0],
-        #     [1, -1, 0, 0]
-        # ])
-
-        # state = [1, *list(board.ravel())]
-        # state = list(board.ravel())
-        # print(torch.Tensor([state]))
-        # dist = self.agents[-1].anet(torch.Tensor([state]))
-        
-        # print(dist.reshape(4, 4))
 
 
     def run(self, alternate=True):
@@ -53,12 +31,12 @@ class TOPP:
                 for g in range(self.num_games):
                     # render = agent1.index != last and self.game_name == 'hex' and False 
                     # render = agent1.index == 0 and agent2.index == 9
-                    render = agent2.index == 19 and not has_rendered and False
+                    render = agent2.index == 9 and not has_rendered
                     switch = False
                     if alternate:
                         # switch = np.random.choice([True, False])
                         switch = g%2 == 0
-                    # switc
+                    
 
                     if switch:
                         if render:

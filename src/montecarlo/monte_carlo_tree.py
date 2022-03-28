@@ -8,18 +8,18 @@ import graphviz
 import torch.multiprocessing as tmp
 
 class MonteCarloTree:
-    def __init__(self, max_depth, c, use_mp, action_space, **_):
+    def __init__(self, max_depth, c, action_space, **_):
+        '''
+        Initialize the Monte Carlo Tree
+        
+        Args:
+        
+        '''
         self.max_depth = max_depth
         self.action_space = action_space
         self.c = c
         self.expansion_threshold = 0
         self.root = None
-
-        # Multiprocessing
-        self.use_mp = use_mp
-        self.cpu_count = tmp.cpu_count()
-        # self.processes = [None for i in range(self.cpu_count)]
-        # self.q = tmp.Manager().Queue()
 
         self.vis_counter = 0
 
@@ -28,7 +28,6 @@ class MonteCarloTree:
         if isinstance(state, Node):
             self.root = state
             self.root.parent = None
-            # self.root.origin_action = None
         else:
             self.root = Node(parent=None, origin_action=None, state=state, c=self.c)
 
@@ -139,16 +138,10 @@ class MonteCarloTree:
     def rollout(self, agent, sm: StateManager, leaf: Node):
         state = leaf.state
         while not sm.is_final(state): # Rollout to final state
-            # print('\nNEW ROUND')
-            # sm.render_state(state)
             curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
-            # print('Flipped')
             legal_moves = sm.get_legal_moves([curr_player, *flipped_state])
             action = agent.choose_action(flipped_state, legal_moves) 
-            # print(f'Chosen action: {action}')
             action = sm.flip_action(action, state_was_flipped)
-            # print(f'Flipped action: {action}')
-            # sm.render_state([curr_player, *flipped_state])
             state = sm.get_successor(state, action)
         winner = sm.get_winner(state)
         Z = winner

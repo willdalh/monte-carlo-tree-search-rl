@@ -43,6 +43,13 @@ class StateManager(ABC):
         pass
 
     @abstractmethod
+    def flip_action(self, action, state_was_flipped):
+        pass
+
+    def flip_distribution(self, D, state_was_flipped):
+        pass
+
+    @abstractmethod
     def render_state(self, state):
         pass
 

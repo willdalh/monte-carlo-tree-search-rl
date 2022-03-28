@@ -37,7 +37,7 @@ if __name__ == '__main__':
             #     summing += num
             #     # del num
             # processes = []
-            res = pool.map(method, [i for i in range(cpu_count)], ())
+            res = pool.map(method, [i for i in range(cpu_count)])
             pool.map()
             summing += sum(res)
         else:

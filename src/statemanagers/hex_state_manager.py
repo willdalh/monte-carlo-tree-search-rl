@@ -13,11 +13,22 @@ class HEXStateManager(StateManager):
         self.temp_board = np.zeros((self.K, self.K))
 
     def get_initial_state(self):
-        # player_turn = np.random.randint(1, 3)
+        '''Return the initial state of the game.'''
         player_turn = 1
         return [player_turn, *[0 for _ in range(self.K * self.K)]]
 
     def get_successor_states(self, state, return_moves=False):
+        '''
+        Get the successor states of the given state.
+        
+        Args:
+            state: A state of size K*K + 1
+            return_moves: If True, return the action indices associated with the successor states.
+
+        Returns:
+            successors: A list of successor states.
+            legal_moves: A list of legal moves if return_moves is True, None otherwise.
+        '''
         if self.is_final(state):
             return [], [] # No children available
         legal_moves = self.get_legal_moves(state)
@@ -29,6 +40,16 @@ class HEXStateManager(StateManager):
         return successors
 
     def get_successor(self, state, a):
+        '''
+        Get the successor state of the given state with the given action.
+        
+        Args:
+            state: A state of size K*K + 1
+            a: An action index.
+        
+        Returns:
+            The successor state.
+        '''
         curr_player = state[0]
         board = state[1:]
         board[a] = curr_player
@@ -36,6 +57,7 @@ class HEXStateManager(StateManager):
         return [next_player, *board]
 
     def _fill_temp_board(self, state):
+        '''Fill the temporary board with the given state.'''
         board = state[1:]
     
         for y in range(self.K):
@@ -43,6 +65,15 @@ class HEXStateManager(StateManager):
                 self.temp_board[y, x] = board[y * self.K + x] 
 
     def get_winner_chain(self, state):
+        '''
+        Locate the winning path in the given state.
+        
+        Args:
+            state: A state of size K*K + 1
+        
+        Returns:
+            A list of coordinates of the winning path.
+        '''
         self._fill_temp_board(state)
 
         # Check two borders
@@ -59,18 +90,27 @@ class HEXStateManager(StateManager):
                     return chain
 
     def is_final(self, state):
+        '''
+        Check if the given state is a final state.
+        
+        Args:
+            state: A state of size K*K + 1
+
+        Returns:
+            True if the given state is a final state, False otherwise.
+        '''
         self._fill_temp_board(state)
 
         # Check two borders
         for i in range(self.temp_board.shape[0]):
             if self.temp_board[0, i] == 1: # Player 1 should span all rows
-                found_chain, chain = self.flood_check(self.temp_board, (0, i), 1, [])
+                found_chain, _ = self.flood_check(self.temp_board, (0, i), 1, [])
                 if found_chain:
                     return True
 
         for i in range(self.temp_board.shape[0]):
             if self.temp_board[i, 0] == -1: # Player 2 should span all columns
-                found_chain, chain = self.flood_check(self.temp_board, (i, 0), -1, [])
+                found_chain, _ = self.flood_check(self.temp_board, (i, 0), -1, [])
                 if found_chain:
                     return True
 
@@ -134,12 +174,20 @@ class HEXStateManager(StateManager):
         return self.K*self.K + 1
 
     def flip_state(self, state):
-        '''Flip state to make it from the perspective of player 1'''
+        '''
+        Flip state to make it from the perspective of player 1.
+        This is achieved by transposing the board and negating it.
+
+        Args:
+            state: A state of size
+
+        Returns
+        '''
         if state[0] == 1:
             return state[0], state[1:], False
         board = np.array(state[1:]).reshape(self.K, self.K)
         board = board.T * -1
-        return  state[0], list(board.ravel()), True
+        return  state[0], (board.ravel()).tolist(), True
 
     def flip_action(self, action, state_was_flipped):
         if state_was_flipped:
@@ -153,8 +201,8 @@ class HEXStateManager(StateManager):
             return D.reshape(self.K, self.K).T.ravel()
         return D
         
-    def render_state(self, state, chain=None):
+    def render_state(self, state, chain=None, wait_for_input=True):
         if self.visualizer == None:
             self.visualizer = HEXVisualizer(self.K)
         board = np.array(state[1:]).reshape(self.K, self.K)
-        self.visualizer.draw_board(board, player=state[0], chain=chain)
+        self.visualizer.draw_board(state, chain=chain, wait_for_input=wait_for_input)

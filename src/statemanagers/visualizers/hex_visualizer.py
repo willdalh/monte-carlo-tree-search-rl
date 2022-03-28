@@ -39,7 +39,8 @@ class HEXVisualizer:
 
         self.screen_initialized = False
     
-    def draw_board(self, board, player, chain=None):
+    def draw_board(self, state, chain=None, nodes_text=None, wait_for_input=True):
+        player, board = state[0], np.array(state[1:]).reshape(self.K, self.K)
         if not self.screen_initialized:
             self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
             self.screen_initialized = True
@@ -69,39 +70,47 @@ class HEXVisualizer:
                 pygame.draw.line(self.screen, self.GOLD, point, next_point, width=10)
 
         small_font = pygame.font.SysFont(None, 16)
+        mini_font = pygame.font.SysFont(None, 8)
         for i, (points, indices) in enumerate(zip(self.diag_points, self.diag_indices)): # Draw lines to above elements
             for j, (point, index) in enumerate(zip(points, indices)):
                 player = board[index]
                 index_text = None
+                index_flat = index[0] * self.K + index[1]
+                text_color = self.BLACK if player == 0 or player == 1 else self.WHITE
+                
                 if player == 0:
                     pygame.draw.circle(self.screen, self.BLACK, point, self.piece_radius, width=3)
                     pygame.draw.circle(self.screen, self.WHITE, point, self.piece_radius - 3)
-                    index_text = small_font.render(f'{index[0] * self.K + index[1]}', True, self.BLACK)
                     
                 elif player == 1:
                     pygame.draw.circle(self.screen, self.PLAYER1_COLOR, point, self.piece_radius)
-                    index_text = small_font.render(f'{index[0] * self.K + index[1]}', True, self.BLACK)
-                    
+                  
                 elif player == -1:
                     pygame.draw.circle(self.screen, self.PLAYER2_COLOR, point, self.piece_radius)
-                    index_text = small_font.render(f'{index[0] * self.K + index[1]}', True, self.WHITE)
-                
-                index_text_rect = index_text.get_rect(center=point)
+
+                index_text = small_font.render(f'{index_flat}', True, text_color)
+                index_text_rect = index_text.get_rect(center=point if nodes_text == None else (point[0], point[1]-8))
                 self.screen.blit(index_text, index_text_rect)
 
-        
-
+                if nodes_text != None:
+                    desc_text = small_font.render(f'{nodes_text[index_flat]}', True, text_color)
+                    desc_text_rect = desc_text.get_rect(center=(point[0], point[1]+2))
+                    self.screen.blit(desc_text, desc_text_rect)
+         
 
         pygame.display.flip()
-        while True:
-            break_loop = False
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        break_loop = True
-            if break_loop:
-                break
-        # pygame.time.wait(frame_delay)
+        if wait_for_input:
+            while True:
+                break_loop = False
+                for event in pygame.event.get():
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE:
+                            break_loop = True
+                if break_loop:
+                    break
+        else:
+            # pygame.time.wait(100)
+            pass
 
     def get_diag_indices(self):
         diag_indices = []

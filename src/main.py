@@ -12,15 +12,8 @@ from run_training import run_training
 
 from topp.topp import TOPP
 
-
-# Temporary
-from ai.model import Model
-import torch
-import torch.nn.functional as F
-
 def main(args):
     if not args.run_topp:
-        torch.set_num_threads(1)
         # Set up logging directory
         if not os.path.isdir('../logs'):
             os.mkdir('../logs')
@@ -37,9 +30,8 @@ def main(args):
         logging.basicConfig(filename=f'{args.log_dir}/debug.log', format='%(message)s', level=logging.DEBUG)
         logging.getLogger('matplotlib').setLevel(logging.WARNING)
         logging.getLogger('PIL').setLevel(logging.WARNING)
-        logging.debug('Starting')
 
-        # Import chosen state manager
+        # Import state manager as specified by the game argument
         sm_file_name = '%s_state_manager' % args.game.lower()
         sm_class_name = '%sStateManager' % args.game.upper()
         state_manager = importlib.import_module('statemanagers.%s'%sm_file_name).__dict__[sm_class_name]
@@ -115,7 +107,6 @@ if __name__ == '__main__':
     parser.add_argument('--search_time', type=float, default=0.5, help='Time allowed for performing search games for each episode. Used when search_games <= 0.')
     parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
     parser.add_argument('--c', type=float, default=1.0, help='Exploration constant for the tree policy')
-    parser.add_argument('--use_mp', type=str_to_bool, default=False, help='')
 
     # ANET and Agent parameters
     parser.add_argument('--buffer_size', type=int, default=500000, help='The maximum size of the replay buffer')
@@ -123,6 +114,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.001, help='The learning rate for the ANET')
     parser.add_argument('--nn_dim', type=str_to_list, default='256,relu,256,relu', help='The structure of the neural network, excluding the state space size at the start and the action space size at the end')
     parser.add_argument('--optimizer', type=str, default='adam', help='The optimizer used by the neural network to perform gradient descent')
+    parser.add_argument('--epsilon', type=float, default=1.0, help='The starting epsilon for the epsilon-greedy policy')
     parser.add_argument('--epsilon_decay', type=float, default=0.99, help='The value to decay epsilon by for every episode')
     parser.add_argument('--pre_trained_path', type=str, default=None, help='Path to a pretrained model to continue training on')
 
@@ -177,7 +169,13 @@ if __name__ == '__main__':
     python main.py --search_games 0 --search_time 2 --game HEX --hex_k 5 --episodes 600 --num_anet_saves 20 --epsilon_decay 0.992 --lr 0.0009 --nn_dim 412,relu,412,relu
     
 
+
+
     TRY THESE:
     python main.py --search_games 0 --search_time 1 --game HEX --hex_k 3 --episodes 100 --num_anet_saves 20 --epsilon_decay 0.99 --lr 0.001 --nn_dim 'conv(c5),relu,400,relu'
     
+
+    FOR DEMO:
+    python main.py --episodes 100 --hex_k 3 --lr 0.0007 --search_time 1 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c6),relu,conv(c8),relu,100,relu'
+
     '''

@@ -3,8 +3,6 @@ import torch
 import matplotlib.pyplot as plt
 import time
 import logging
-# import torch.multiprocessing as tmp
-import multiprocessing as tmp
 
 from ai.agent import Agent
 from statemanagers.state_manager import StateManager
@@ -17,12 +15,6 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     NUM_ANET_SAVES = args.num_anet_saves
     tic = time.time()
 
-    if args.use_mp:
-        pass
-        # queue = tmp.Manager().Queue()
-        # processes = []
-        # pool = tmp.Pool(processes=None)
-        # roller = Roller(sm)
 
     for e in range(NUM_EPISODES + 1):
         logging.debug(f'Running episode {e}')
@@ -80,6 +72,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                     Z = mct.rollout(agent, sm, leaf)
                     mct.backpropagate(leaf, Z)
                     # print(g)
+
             else:
                 start_time = time.time()
                 search_games = 0
@@ -90,7 +83,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                     search_games += 1
                 if e < 5:
                     logging.debug(f'Episode {e} - search games done: {search_games}')
-
+    
             if study:
                 if args.display:
                     mct.visualize(depth=1)
@@ -100,7 +93,10 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
 
             D = mct.get_visit_distribution()
             
-            agent.store_case((state, D), sm)
+            curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
+            flipped_D = sm.flip_distribution(D, state_was_flipped)
+            agent.store_case((flipped_state, flipped_D), sm)
+
             action = np.argmax(D)
             
             child_selected = None
@@ -120,26 +116,25 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
         if e%(int(NUM_EPISODES/40)) == 0:
             print(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon:0.5f} loss={mean_loss:0.4f} buffersize={agent.buffer.cases_added}')
 
-        # [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]
 
 
     toc = time.time()
     print(f'Time used for training: {toc-tic} seconds')
 
     # Verification
-    agent.present_results(args.log_dir, args.display)
-    agent.epsilon = 0
-    for e in range(4):
-        logging.debug(f'Round {e}')
-        state = sm.get_initial_state()
-        while not sm.is_final(state):
-            logging.debug(f'Current state: {state}')
-            curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
-            action = agent.choose_action(flipped_state, sm.get_legal_moves(state), debug=True)
-            action = sm.flip_action(action, state_was_flipped)
-            if action not in sm.get_legal_moves(state):
-                logging.debug('Had to choose random')
-                action = np.random.choice(sm.get_legal_moves(state))
-            state = sm.get_successor(state, action)
+    # agent.present_results(args.log_dir, args.display)
+    # agent.epsilon = 0
+    # for e in range(4):
+    #     logging.debug(f'Round {e}')
+    #     state = sm.get_initial_state()
+    #     while not sm.is_final(state):
+    #         logging.debug(f'Current state: {state}')
+    #         curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
+    #         action = agent.choose_action(flipped_state, sm.get_legal_moves(state), debug=True)
+    #         action = sm.flip_action(action, state_was_flipped)
+    #         if action not in sm.get_legal_moves(state):
+    #             logging.debug('Had to choose random')
+    #             action = np.random.choice(sm.get_legal_moves(state))
+    #         state = sm.get_successor(state, action)
     
 
