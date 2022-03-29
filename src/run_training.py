@@ -6,7 +6,7 @@ import logging
 
 from ai.agent import Agent
 from statemanagers.state_manager import StateManager
-from montecarlo.monte_carlo_tree import MonteCarloTree, Roller
+from montecarlo.monte_carlo_tree import MonteCarloTree
 
 
 def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
@@ -15,7 +15,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     NUM_ANET_SAVES = args.num_anet_saves
     tic = time.time()
 
-
+    # Outer loop for actual games
     for e in range(NUM_EPISODES + 1):
         logging.debug(f'Running episode {e}')
         if e%(int(NUM_EPISODES/(NUM_ANET_SAVES - 1))) == 0:
@@ -24,55 +24,20 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             break
 
         state = sm.get_initial_state()
-
-        study = False
-        study_states = [
-            [-1, *list(np.array([
-                [ 0,  0,  1,  0,  0],
-                [ 0,  1, -1,  1,  0],
-                [-1, -1, -1, -1,  0],
-                [ 1,  1,  0,  0,  0],
-                [ 1, -1,  0,  0,  1]
-            ]).ravel())],
-
-            [1, *list(np.array([
-                [ 0,  0,  1,  0,  0],
-                [ 0,  1, -1,  0,  1],
-                [-1, -1, -1, -1,  0],
-                [ 1,  1,  0,  0,  0],
-                [ 1, -1,  0,  0,  0]
-            ]).ravel())],
-
-            [1, *list(np.array([
-                [-1, -1, 0],
-                [0, 0, 0], 
-                [0, 1, 1]
-            ]).ravel())],
-
-            [-1, *list(np.array([
-                [-1, -1, 0],
-                [0, 1, 0], 
-                [0, 1, 1]
-            ]).ravel())]
-
-        ]
-        if study:
-            # pass
-            state = study_states[3]
-            
-
         mct.set_root(state)
         mct.expand_node(mct.root, sm)
 
+        # Second loop for actual moves
         while not sm.is_final(state):
+            if args.render:
+                sm.render_state(state, frame_delay=args.frame_delay)
             
+            # Inner loop for search games
             if args.search_games > 0:
                 for g in range(NUM_SEARCH_GAMES):
                     leaf = mct.tree_search_expand(sm)
                     Z = mct.rollout(agent, sm, leaf)
                     mct.backpropagate(leaf, Z)
-                    # print(g)
-
             else:
                 start_time = time.time()
                 search_games = 0
@@ -83,35 +48,36 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                     search_games += 1
                 if e < 5:
                     logging.debug(f'Episode {e} - search games done: {search_games}')
-    
-            if study:
-                if args.display:
-                    mct.visualize(depth=1)
-                    sm.render_state(state)
-                # print(mct.get_visit_distribution().reshape(sm.K, sm.K))
-               
-
+            
             D = mct.get_visit_distribution()
             
-            curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
-            flipped_D = sm.flip_distribution(D, state_was_flipped)
+            curr_player, flipped_state, state_was_flipped = sm.flip_state(state) # Flip state to be from the perspective of player 1
+            flipped_D = sm.flip_distribution(D, state_was_flipped) # If state was flipped, flip the distribution
             agent.store_case((flipped_state, flipped_D), sm)
 
             action = np.argmax(D)
             
+            # Find the node corresponding to the action taken from the root
             child_selected = None
             for child in mct.root.children:
                 if action == child.origin_action:
                     child_selected = child
                     break
+            
+            # Retain the subtree rooted at the selected child
             mct.set_root(child_selected)
             state = mct.root.state
+        
+        if args.render:
+            if args.game == 'HEX':
+                chain = sm.get_winner_chain(state)
+                sm.render_state(state, frame_delay=args.frame_delay, chain=chain)
+            if args.game == 'NIM':
+                sm.render_state(state)
 
         # Train ANET on a random minibatch of cases from ReplayBuffer
         mean_loss = agent.train_on_buffer_batch(debug=NUM_EPISODES - e < 30)
 
-        
-        # print('End of episode')
         logging.debug(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon:0.5f} loss={mean_loss:0.4f} buffersize={agent.buffer.cases_added}')
         if e%(int(NUM_EPISODES/40)) == 0:
             print(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon:0.5f} loss={mean_loss:0.4f} buffersize={agent.buffer.cases_added}')
@@ -122,19 +88,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     print(f'Time used for training: {toc-tic} seconds')
 
     # Verification
-    # agent.present_results(args.log_dir, args.display)
-    # agent.epsilon = 0
-    # for e in range(4):
-    #     logging.debug(f'Round {e}')
-    #     state = sm.get_initial_state()
-    #     while not sm.is_final(state):
-    #         logging.debug(f'Current state: {state}')
-    #         curr_player, flipped_state, state_was_flipped = sm.flip_state(state)
-    #         action = agent.choose_action(flipped_state, sm.get_legal_moves(state), debug=True)
-    #         action = sm.flip_action(action, state_was_flipped)
-    #         if action not in sm.get_legal_moves(state):
-    #             logging.debug('Had to choose random')
-    #             action = np.random.choice(sm.get_legal_moves(state))
-    #         state = sm.get_successor(state, action)
+    agent.present_results(args.log_dir, args.display)
+
     
 

@@ -65,15 +65,16 @@ class ReplayBufferTensor:
         return states, targets
 
     def get_histogram(self):
-        '''Return a histogram of the buffer'''
-        uniques = torch.unique(self.states, dim=0)
+        '''Return a histogram of the buffer. For debugging purposes.'''
+        cases_inside = self.cases_added if self.cases_added < self.max_size else self.max_size
+        uniques = torch.unique(self.states[:cases_inside], dim=0) # Find unique states
         counts = {}
-        for u in uniques:
-            if not torch.all(u == torch.zeros(u.shape[0])):
-                counts[tuple(map(int, u.tolist()))] = torch.count_nonzero(torch.all(self.states == u, dim=1))
+
+        for u in uniques: # Count the number of times each state appears
+            counts[tuple(map(int, u.tolist()))] = torch.count_nonzero(torch.all(self.states[:cases_inside] == u, dim=1))
 
         res = ''
-        counts_sorted = dict(sorted(counts.items(), key=lambda x: x[1]))
+        counts_sorted = dict(sorted(counts.items(), key=lambda x: x[1])[::-1])
         for key, val in counts_sorted.items():
             res += f'{list(key)}: {val}\n'
         return res

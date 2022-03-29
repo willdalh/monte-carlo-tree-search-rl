@@ -13,20 +13,25 @@ from run_training import run_training
 from topp.topp import TOPP
 
 def main(args):
-    if not args.run_topp:
+    if not args.run_topp: # Run training
+
         # Set up logging directory
         if not os.path.isdir('../logs'):
             os.mkdir('../logs')
 
+        not_to_be_deleted = ['../logs/train_log_7x7_good']
+        if args.log_dir in not_to_be_deleted:
+            raise Exception(f'The log directory {args.log_dir.split("/")[-1]} is not allowed to be deleted')
+            
         if os.path.isdir(args.log_dir):
-            # TODO ASK BEFORE DELETION
             shutil.rmtree(args.log_dir)
         os.mkdir(args.log_dir)
         os.mkdir(f'{args.log_dir}/models')
 
-        with open(f'{args.log_dir}/args.json', 'w') as f:
+        with open(f'{args.log_dir}/args.json', 'w') as f: # Save arguments to file
             json.dump(args.__dict__, f, indent=4)
 
+        # Set up logging
         logging.basicConfig(filename=f'{args.log_dir}/debug.log', format='%(message)s', level=logging.DEBUG)
         logging.getLogger('matplotlib').setLevel(logging.WARNING)
         logging.getLogger('PIL').setLevel(logging.WARNING)
@@ -37,9 +42,10 @@ def main(args):
         state_manager = importlib.import_module('statemanagers.%s'%sm_file_name).__dict__[sm_class_name]
         sm = state_manager(**vars(args))
         
+        # Interpret state and action dimensions and prepare them for use in the agent
         state_size = sm.get_state_size()
         action_space_size = sm.get_action_space_size()
-        args.nn_dim.insert(0, state_size-1)
+        args.nn_dim.insert(0, state_size-1) # The agent works from the perspective of player 1 and therefore does not need any player id when feeding states to the ANET
         args.nn_dim.append(action_space_size)
 
         kwargs = vars(args)
@@ -49,25 +55,30 @@ def main(args):
 
         run_training(args, sm, mct, agent)
     
-    else:
+    else: # Run TOPP
+        
+        # Load arguments from the saved directory
         saved_args = argparse.Namespace()
         with open(f'{args.saved_dir}/args.json', 'r') as f:
             saved_args.__dict__ = json.load(f)
         
+        # Import state manager as specified by the game argument in the saved directory
         sm_file_name = '%s_state_manager' % saved_args.game.lower()
         sm_class_name = '%sStateManager' % saved_args.game.upper()
         state_manager = importlib.import_module('statemanagers.%s'%sm_file_name).__dict__[sm_class_name]
         sm = state_manager(**vars(saved_args))
 
+        # Interpret state and action dimensions and prepare them for use in the agent
         saved_args.nn_dim.insert(0, sm.get_state_size()-1)
         saved_args.nn_dim.append(sm.get_action_space_size())
-  
-        model_paths = glob.glob(f'{args.saved_dir}/models/anet*.pt')
-        model_paths = sorted(model_paths, key=lambda x: int(x.split('_')[-1][:-3]))
-        if len(model_paths) == 0:
-            raise FileNotFoundError('No saved ANETs found in the specified directory')
 
-        topp = TOPP(saved_args.game, model_paths, sm, nn_dim=saved_args.nn_dim, num_duel_games=args.num_duel_games)
+        # Load all saved models
+        model_paths = glob.glob(f'{args.saved_dir}/models/anet*.pt')
+        model_paths = sorted(model_paths, key=lambda x: int(x.split('_')[-1][:-3])) # Sort by which episode the model was saved at
+        if len(model_paths) < 2:
+            raise FileNotFoundError(f'There are not enough saved models in {args.saved_dir} to run the TOPP')
+        
+        topp = TOPP(saved_dir=args.saved_dir, num_duel_games=args.num_duel_games, alternate=args.alternate, best_starts_first=args.best_starts_first, game=saved_args.game, model_paths=model_paths, sm=sm, nn_dim=saved_args.nn_dim)
         topp.run()
         topp.present_results()
 
@@ -75,10 +86,12 @@ def main(args):
 # [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]
 
 def str_to_bool(x):
+    '''Convert string to boolean'''
     x = x.lower()
     return x == 'true'
 
 def str_to_list(x):
+    '''Convert string to list where integers are interpreted as integers and strings as strings'''
     arr = x.split(',')
     return [int(e) if e.isdigit() else e for e in arr]
 
@@ -105,7 +118,6 @@ if __name__ == '__main__':
     # MCTS parameters
     parser.add_argument('--search_games', type=int, default=500, help='The number of search games to be simulated for each root state.')
     parser.add_argument('--search_time', type=float, default=0.5, help='Time allowed for performing search games for each episode. Used when search_games <= 0.')
-    parser.add_argument('--max_depth', type=int, default=3, help='The depth that the Monte Carlo Tree should be maintained at')
     parser.add_argument('--c', type=float, default=1.0, help='Exploration constant for the tree policy')
 
     # ANET and Agent parameters
@@ -121,61 +133,36 @@ if __name__ == '__main__':
     # TOPP
     parser.add_argument('--run_topp', type=str_to_bool, default=False, help='Whether or not to run TOPP')
     parser.add_argument('--saved_dir', type=str, default='train_log_test', help='The root folder where the saved nets reside')
-    parser.add_argument('--num_duel_games', type=int, default=25, help='The number of games to be played between any two ANET-based agents during TOPP')
+    parser.add_argument('--num_duel_games', type=int, default=2, help='The number of games to be played between any two ANET-based agents during TOPP')
+    parser.add_argument('--alternate', type=str_to_bool, default=False, help='Whether or not to alternate between who starts first during a series of games')
+    parser.add_argument('--best_starts_first', type=str_to_bool, default=True, help='If not alternating, whether or not to let the best ANET start first during a series of games')
 
+    # Visualization
     parser.add_argument('--display', type=str_to_bool, default=True, help='Whether or not to display graphs')
+    parser.add_argument('--render', type=str_to_bool, default=False, help='Whether or not to render the game')
+    parser.add_argument('--frame_delay', type=int, default=0, help='The amount of time to delay between frames in milliseconds. If less than 0, press on spacebar is expected to continue.')
 
 
     ns_args = parser.parse_args()
     # Processing of args
     ns_args.log_dir = f'../logs/{ns_args.log_dir}'
     ns_args.saved_dir = f'../logs/{ns_args.saved_dir}'
+    ns_args.game = ns_args.game.upper()
 
     print(f'Arguments:\n{ns_args}\n')
     main(ns_args)
 
-    '''
-    NIM:
-
-    python main.py --episodes 400 --nn_dim 32,relu,16,relu --epsilon_decay 0.999 --lr 0.001 --batch_size 64
-    
-    python main.py --episodes 500 --batch_size 64 --lr 0.013 --epsilon_decay 0.9999
-    python main.py --episodes 500 --batch_size 64 --lr 0.0013 --epsilon_decay 0.9999
-    python main.py --episodes 350 --batch_size 64 --search_games 1000 --lr 0.002 --epsilon_decay 0.9999
 
 
-    python main.py --episodes 400 --lr 0.00001 --epsilon_decay 0.99999
+'''
 
-    python main.py --episodes 600 --lr 0.005 --epsilon_decay 0.99 --nim_k 3 --nim_n 9
-
-    NÅR SAMME SPILLER STARTER HELE TIDEN n=10 k=3
-    SIGMOID:
-    python main.py --episodes 1000 --epsilon_decay 0.995 --lr 0.003
-
-    RELU funker også
-    python main.py --episodes 1000 --epsilon_decay 0.995 --lr 0.001
+TRY THESE:
+python main.py --search_games 0 --search_time 1 --game HEX --hex_k 3 --episodes 100 --num_anet_saves 20 --epsilon_decay 0.99 --lr 0.001 --nn_dim 'conv(c5),relu,400,relu'
 
 
-    NÅR target er argmax
-    python main.py --episodes 100 --epsilon_decay 0.97 --lr 0.002 --search_games 500
+FOR DEMO:
+python main.py --episodes 100 --hex_k 3 --lr 0.0007 --search_time 1 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,100,relu'
 
-
-    FOR MYE EPISODER KANSKJE
-    python main.py --episodes 1000 --epsilon_decay 0.997 --lr 0.001 --search_games 500 --game HEX --hex_k 4 --run_topp True
-    ------
-    
-    python main.py --episodes 400 --game HEX --epsilon_decay 0.99 --lr 0.0007 --hex_k 7 --search_games 0 --search_time 0.8 --log_dir train_log_7x7
-    
-    python main.py --search_games 0 --search_time 2 --game HEX --hex_k 5 --episodes 600 --num_anet_saves 20 --epsilon_decay 0.992 --lr 0.0009 --nn_dim 412,relu,412,relu
-    
-
-
-
-    TRY THESE:
-    python main.py --search_games 0 --search_time 1 --game HEX --hex_k 3 --episodes 100 --num_anet_saves 20 --epsilon_decay 0.99 --lr 0.001 --nn_dim 'conv(c5),relu,400,relu'
-    
-
-    FOR DEMO:
-    python main.py --episodes 100 --hex_k 3 --lr 0.0007 --search_time 1 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c6),relu,conv(c8),relu,100,relu'
-
-    '''
+python main.py --episodes 40 --hex_k 4 --lr 0.003 --search_time 0.3 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,64,relu'
+python main.py --episodes 40 --hex_k 4 --lr 0.0025 --search_time 0.3 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,64,re lu'
+'''

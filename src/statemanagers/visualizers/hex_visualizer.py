@@ -16,7 +16,6 @@ class HEXVisualizer:
         self.WHITE = (255, 255, 255) 
         self.BLACK = (0, 0, 0) 
         
-        # self.BLUE = (52, 152, 219)
         self.PLAYER1_COLOR = (231, 76, 60)
         self.PLAYER2_COLOR = (47, 54, 64)
 
@@ -39,7 +38,7 @@ class HEXVisualizer:
 
         self.screen_initialized = False
     
-    def draw_board(self, state, chain=None, nodes_text=None, wait_for_input=True):
+    def draw_board(self, state, frame_delay=100, chain=None, nodes_text=None):
         player, board = state[0], np.array(state[1:]).reshape(self.K, self.K)
         if not self.screen_initialized:
             self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -99,7 +98,7 @@ class HEXVisualizer:
          
 
         pygame.display.flip()
-        if wait_for_input:
+        if frame_delay < 0: # Press space to continue
             while True:
                 break_loop = False
                 for event in pygame.event.get():
@@ -108,9 +107,9 @@ class HEXVisualizer:
                             break_loop = True
                 if break_loop:
                     break
-        else:
-            # pygame.time.wait(100)
-            pass
+        elif frame_delay > 0:
+            pygame.time.wait(frame_delay)
+        
 
     def get_diag_indices(self):
         diag_indices = []
