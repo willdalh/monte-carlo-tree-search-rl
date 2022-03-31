@@ -106,6 +106,10 @@ class NIMStateManager(StateManager):
         '''Return the distribution as is'''
         return D
 
+    def get_symmetric_flipped_cases(self, case):
+        '''No symmetric cases.'''
+        return [] # No way to create additional cases
+
     def render_state(self, state):
         '''Render the given state.'''
         print(f'State is {state}')

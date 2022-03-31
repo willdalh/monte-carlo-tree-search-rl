@@ -11,7 +11,13 @@ def main(args, saved_args):
 
     bot = OnlineBot(model_path=f'../logs/{args.saved_dir}/models/{args.model_name}', nn_dim=saved_args.nn_dim, token=token)
     for i in range(1000):
-        bot.run(mode='league') 
+        # load_dotenv()
+        # should_stop = os.getenv('SHOULD_STOP').lower() == 'true'
+        # if should_stop: 
+        #     print('Safely disconnected')
+        #     break
+
+        bot.run() 
 
 
 if __name__ == '__main__':
@@ -20,7 +26,6 @@ if __name__ == '__main__':
     # General parameters
     parser.add_argument('--saved_dir', type=str, default='None', help='The directory of the training session where the saved net is')
     parser.add_argument('--model_name', type=str, default='None', help='The name of the model')
-    parser.add_argument('--episodes', type=int, default=500, help='The number of actual games the system will run')
 
     args = parser.parse_args()
 

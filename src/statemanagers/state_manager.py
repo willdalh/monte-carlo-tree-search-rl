@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 
 class StateManager(ABC):
-    '''Class defining an abstract state manager.'''
+    '''
+    Class defining an abstract state manager.
+    State managers inheritng from this task should have the ability to translate a state from the perspective of player 2 to player 1.
+    '''
     @abstractmethod
     def get_initial_state(self):
         pass
@@ -48,6 +51,10 @@ class StateManager(ABC):
 
     @abstractmethod
     def flip_distribution(self, D, state_was_flipped):
+        pass
+
+    @abstractmethod
+    def get_symmetric_flipped_cases(self, case):
         pass
 
     @abstractmethod

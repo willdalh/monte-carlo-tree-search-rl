@@ -53,7 +53,7 @@ class TOPP:
                 print(f'Agent {self.episodes_saved_at[i]} vs Agent {self.episodes_saved_at[j]}: {start_policy}')
         
                 for g in range(self.num_games):
-                    render = self.render and agent2.index == self.agents[-1].index
+                    render = self.render# and agent2.index == self.agents[-1].index
 
                     switch = False
                     if self.alternate:

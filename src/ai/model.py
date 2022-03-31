@@ -167,7 +167,6 @@ class Model(nn.Module):
 
         logging.debug('nn_dim interpreted as:')
         logging.debug(layers_test)
-        print('nn_dim interpreted as:', layers_test, '\n')
 
         return layers
 
@@ -233,7 +232,7 @@ class Model(nn.Module):
         # Add linear layers
         structure = [e for e in nn_dim if isinstance(e, int)] # Get hidden layer sizes by filtering out activation functions
         structure.insert(0, flattened_size)
-        print(structure)
+
         # Initialize linear layers and store them in the list layers
         for i, (in_neurons, out_neurons) in enumerate(zip(structure, structure[1:])):
             layers.append((f'layer{i+1}', nn.Linear(in_neurons, out_neurons)))

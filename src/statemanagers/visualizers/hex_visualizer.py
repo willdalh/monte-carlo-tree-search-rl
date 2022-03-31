@@ -98,16 +98,17 @@ class HEXVisualizer:
                 elif player == -1:
                     pygame.draw.circle(self.screen, self.PLAYER2_COLOR, point, self.piece_radius)
 
-                # Add flattened index inside point
-                index_text = self.small_font.render(f'{index_flat}', True, text_color)
-                index_text_rect = index_text.get_rect(center=point if nodes_text == None else (point[0], point[1]-8))
-                self.screen.blit(index_text, index_text_rect)
+                if self.K <= 10:
+                    # Add flattened index inside point
+                    index_text = self.small_font.render(f'{index_flat}', True, text_color)
+                    index_text_rect = index_text.get_rect(center=point if nodes_text == None else (point[0], point[1]-8))
+                    self.screen.blit(index_text, index_text_rect)
 
-                # Add additional text inside nodes if available
-                if nodes_text != None:
-                    desc_text = self.small_font.render(f'{nodes_text[index_flat]}', True, text_color)
-                    desc_text_rect = desc_text.get_rect(center=(point[0], point[1]+2))
-                    self.screen.blit(desc_text, desc_text_rect)
+                    # Add additional text inside nodes if available
+                    if nodes_text != None:
+                        desc_text = self.small_font.render(f'{nodes_text[index_flat]}', True, text_color)
+                        desc_text_rect = desc_text.get_rect(center=(point[0], point[1]+2))
+                        self.screen.blit(desc_text, desc_text_rect)
          
         pygame.display.flip()
         if frame_delay < 0: # Press space to continue

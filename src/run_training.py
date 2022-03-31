@@ -8,8 +8,17 @@ from ai.agent import Agent
 from statemanagers.state_manager import StateManager
 from montecarlo.monte_carlo_tree import MonteCarloTree
 
-
 def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
+    '''
+    Run a training session.
+
+    Args:
+        args: The arguments of the training session as a Namespace.
+        sm: The state-manager to use.
+        mct: The Monte-Carlo-Tree to use for tree-search, node expansion, rollout, and backpropagation.
+        agent: The agent to use.
+    '''
+
     NUM_EPISODES = args.episodes
     NUM_SEARCH_GAMES = args.search_games 
     NUM_ANET_SAVES = args.num_anet_saves
@@ -30,7 +39,8 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
         # Second loop for actual moves
         while not sm.is_final(state):
             if args.render:
-                sm.render_state(state, frame_delay=args.frame_delay)
+                if e in args.episodes_to_render or args.episodes_to_render[0] == -1:
+                    sm.render_state(state, frame_delay=args.frame_delay)
             
             # Inner loop for search games
             if args.search_games > 0:
@@ -53,7 +63,11 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             
             curr_player, flipped_state, state_was_flipped = sm.flip_state(state) # Flip state to be from the perspective of player 1
             flipped_D = sm.flip_distribution(D, state_was_flipped) # If state was flipped, flip the distribution
-            agent.store_case((flipped_state, flipped_D), sm)
+
+            # Create new cases from the current case and store them
+            total_cases = [(flipped_state, flipped_D)] + sm.get_symmetric_flipped_cases((flipped_state, flipped_D)) 
+            for case in total_cases:
+                agent.store_case(case)
 
             action = np.argmax(D)
             
@@ -69,14 +83,16 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             state = mct.root.state
         
         if args.render:
-            if args.game == 'HEX':
-                chain = sm.get_winner_chain(state)
-                sm.render_state(state, frame_delay=args.frame_delay, chain=chain)
-            if args.game == 'NIM':
-                sm.render_state(state)
+            if e in args.episodes_to_render or args.episodes_to_render[0] == -1:
+                if args.game == 'HEX':
+                    chain = sm.get_winner_chain(state)
+                    sm.render_state(state, frame_delay=args.frame_delay, chain=chain)
+                if args.game == 'NIM':
+                    sm.render_state(state)
 
         # Train ANET on a random minibatch of cases from ReplayBuffer
         mean_loss = agent.train_on_buffer_batch(debug=NUM_EPISODES - e < 30)
+        agent.decay_epsilon()
 
         logging.debug(f'Episode {e}/{NUM_EPISODES}: epsilon={agent.epsilon:0.5f} loss={mean_loss:0.4f} buffersize={agent.buffer.cases_added}')
         if e%(int(NUM_EPISODES/40)) == 0:

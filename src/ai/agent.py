@@ -70,8 +70,6 @@ class Agent:
  
         mean_loss = np.mean(losses)
         self.cross_losses.append(mean_loss)
-        if self.epsilon > self.min_epsilon:
-            self.epsilon *= self.epsilon_decay
 
         # with torch.no_grad():
         #     logging.debug('')
@@ -81,23 +79,19 @@ class Agent:
         
         return mean_loss
 
-    def store_case(self, case, sm: StateManager):
+    def decay_epsilon(self):
+        '''Decay the epsilon value.'''
+        self.epsilon *= self.epsilon_decay
+
+    def store_case(self, case):
         '''
         Store a case in the replay buffer.
 
         Args:
             case: tuple of (state, distribution) where the state is from the perspecitve of player 1.
-            sm: The state manager.
         '''
-        state, D = case
-        self.buffer.store_case((state, D))
-        
-        if isinstance(sm, HEXStateManager):
-            symmetric_state = state[::-1] # Rotate 180 degrees
-            if symmetric_state != state: # Do not bother to store same case twice (Happens when one piece is placed in the middle and on initial state)
-                symmetric_D = D[::-1] # Rotate 180 degrees
-                self.buffer.store_case((symmetric_state, symmetric_D))
-            
+        self.buffer.store_case(case)
+
 
     def choose_action(self, state, legal_moves, debug=False):
         '''
@@ -168,7 +162,7 @@ class Agent:
         
         # print('\nLength of buffer:', len(self.buffer.buffer))
         plt.plot(np.arange(len(self.cross_losses)), np.array(self.cross_losses))
-        plt.title('Cross-entropy loss')
+        plt.title('Cross-entropy loss on replay buffer samples')
         plt.savefig(f'{log_dir}/cross_loss.png', dpi=300)
         if display:
             plt.show()

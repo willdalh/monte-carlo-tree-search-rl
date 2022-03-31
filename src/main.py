@@ -13,6 +13,7 @@ from run_training import run_training
 from topp.topp import TOPP
 
 def main(args):
+    
     if not args.run_topp: # Run training
 
         # Set up logging directory
@@ -94,7 +95,7 @@ def str_to_bool(x):
 def str_to_list(x):
     '''Convert string to list where integers are interpreted as integers and strings as strings'''
     arr = x.split(',')
-    return [int(e) if e.isdigit() else e for e in arr]
+    return [int(e) if e.lstrip('-').isdigit() else e for e in arr]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Run main')
@@ -135,12 +136,13 @@ if __name__ == '__main__':
     parser.add_argument('--run_topp', type=str_to_bool, default=False, help='Whether or not to run TOPP')
     parser.add_argument('--saved_dir', type=str, default='train_log_test', help='The root folder where the saved nets reside')
     parser.add_argument('--num_duel_games', type=int, default=2, help='The number of games to be played between any two ANET-based agents during TOPP')
-    parser.add_argument('--alternate', type=str_to_bool, default=False, help='Whether or not to alternate between who starts first during a series of games')
+    parser.add_argument('--alternate', type=str_to_bool, default=True, help='Whether or not to alternate between who starts first during a series of games')
     parser.add_argument('--best_starts_first', type=str_to_bool, default=True, help='If not alternating, whether or not to let the best ANET start first during a series of games')
 
     # Visualization
     parser.add_argument('--display', type=str_to_bool, default=True, help='Whether or not to display graphs')
     parser.add_argument('--render', type=str_to_bool, default=False, help='Whether or not to render the game')
+    parser.add_argument('--episodes_to_render', type=str_to_list, default='-1', help='The episodes to render, separated by commas. -1 for all episodes.')
     parser.add_argument('--frame_delay', type=int, default=10, help='The amount of time to delay between frames in milliseconds. If less than 0, press on spacebar is expected to continue.')
 
 
@@ -156,11 +158,10 @@ if __name__ == '__main__':
 '''
 
 train_log_7x7_good
-python main.py --hex_k 7 episodes 1000 --search_time 4 --search_games 0 --lr 0.0003 --epsilon_decay 0.9998 --nn_dim 'conv(c12-k5-p2),relu,c onv(c10-k3-p1),relu,300,relu'
+python main.py --hex_k 7 episodes 1000 --search_time 4 --search_games 0 --lr 0.0003 --epsilon_decay 0.9998 --nn_dim 'conv(c12-k5-p2),relu,conv(c10-k3-p1),relu,300,relu'
 
 FOR DEMO:
 python main.py --episodes 100 --hex_k 3 --lr 0.0007 --search_time 1 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,100,relu'
 
-python main.py --episodes 40 --hex_k 4 --lr 0.003 --search_time 0.3 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,64,relu'
-python main.py --episodes 40 --hex_k 4 --lr 0.0025 --search_time 0.3 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,64,re lu'
+python main.py --log_dir train_log_demo --episodes 40 --hex_k 4 --lr 0.002 --search_time 0.3 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,64,relu' --num_anet_saves 6
 '''

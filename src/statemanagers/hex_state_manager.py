@@ -242,6 +242,24 @@ class HEXStateManager(StateManager):
         if state_was_flipped:
             return D.reshape(self.K, self.K).T.ravel()
         return D
+
+    def get_symmetric_flipped_cases(self, case):
+        '''
+        Rotate the given case by 180 degrees.
+        
+        Args:
+            case: A tuple of (state, distribution) both elements flattened to a list of length K*K
+        
+        Returns:
+            A list of symmetric cases.
+        '''
+        state, D = case
+        add_cases = [] 
+        symmetric_state = state[::-1] # Rotate 180 degrees
+        if symmetric_state != state: # Do not bother to store same case twice (Happens when one piece is placed in the middle and on initial state)
+            symmetric_D = D[::-1] # Rotate 180 degrees
+            add_cases.append((symmetric_state, symmetric_D))
+        return add_cases
         
     def render_state(self, state, frame_delay=100, chain=None):
         '''Render the given state.'''
