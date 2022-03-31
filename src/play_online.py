@@ -11,7 +11,7 @@ def main(args, saved_args):
 
     bot = OnlineBot(model_path=f'../logs/{args.saved_dir}/models/{args.model_name}', nn_dim=saved_args.nn_dim, token=token)
     for i in range(1000):
-        bot.run(mode='league')
+        bot.run(mode='league') 
 
 
 if __name__ == '__main__':

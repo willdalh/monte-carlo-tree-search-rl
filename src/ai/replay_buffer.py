@@ -57,7 +57,7 @@ class ReplayBufferTensor:
         if batch_size > self.cases_added:
             batch_size = self.cases_added
         num_stored_cases = self.cases_added if self.cases_added < self.max_size else self.max_size
-        indices = np.random.choice(range(num_stored_cases), size=batch_size, replace=False)
+        indices = np.random.choice(range(num_stored_cases), size=batch_size, replace=False) # Slow
 
         states = self.states[indices]
         targets = self.targets[indices] 

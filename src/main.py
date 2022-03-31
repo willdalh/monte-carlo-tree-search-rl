@@ -77,8 +77,9 @@ def main(args):
         model_paths = sorted(model_paths, key=lambda x: int(x.split('_')[-1][:-3])) # Sort by which episode the model was saved at
         if len(model_paths) < 2:
             raise FileNotFoundError(f'There are not enough saved models in {args.saved_dir} to run the TOPP')
+
         
-        topp = TOPP(saved_dir=args.saved_dir, num_duel_games=args.num_duel_games, alternate=args.alternate, best_starts_first=args.best_starts_first, game=saved_args.game, model_paths=model_paths, sm=sm, nn_dim=saved_args.nn_dim)
+        topp = TOPP(saved_dir=args.saved_dir, num_duel_games=args.num_duel_games, alternate=args.alternate, best_starts_first=args.best_starts_first, render=args.render, frame_delay=args.frame_delay, game=saved_args.game, model_paths=model_paths, sm=sm, nn_dim=saved_args.nn_dim)
         topp.run()
         topp.present_results()
 
@@ -140,11 +141,11 @@ if __name__ == '__main__':
     # Visualization
     parser.add_argument('--display', type=str_to_bool, default=True, help='Whether or not to display graphs')
     parser.add_argument('--render', type=str_to_bool, default=False, help='Whether or not to render the game')
-    parser.add_argument('--frame_delay', type=int, default=0, help='The amount of time to delay between frames in milliseconds. If less than 0, press on spacebar is expected to continue.')
+    parser.add_argument('--frame_delay', type=int, default=10, help='The amount of time to delay between frames in milliseconds. If less than 0, press on spacebar is expected to continue.')
 
 
     ns_args = parser.parse_args()
-    # Processing of args
+    # Process arguments
     ns_args.log_dir = f'../logs/{ns_args.log_dir}'
     ns_args.saved_dir = f'../logs/{ns_args.saved_dir}'
     ns_args.game = ns_args.game.upper()
@@ -152,13 +153,10 @@ if __name__ == '__main__':
     print(f'Arguments:\n{ns_args}\n')
     main(ns_args)
 
-
-
 '''
 
-TRY THESE:
-python main.py --search_games 0 --search_time 1 --game HEX --hex_k 3 --episodes 100 --num_anet_saves 20 --epsilon_decay 0.99 --lr 0.001 --nn_dim 'conv(c5),relu,400,relu'
-
+train_log_7x7_good
+python main.py --hex_k 7 episodes 1000 --search_time 4 --search_games 0 --lr 0.0003 --epsilon_decay 0.9998 --nn_dim 'conv(c12-k5-p2),relu,c onv(c10-k3-p1),relu,300,relu'
 
 FOR DEMO:
 python main.py --episodes 100 --hex_k 3 --lr 0.0007 --search_time 1 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,100,relu'

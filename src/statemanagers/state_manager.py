@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 class StateManager(ABC):
-
+    '''Class defining an abstract state manager.'''
     @abstractmethod
     def get_initial_state(self):
         pass
@@ -46,6 +46,7 @@ class StateManager(ABC):
     def flip_action(self, action, state_was_flipped):
         pass
 
+    @abstractmethod
     def flip_distribution(self, D, state_was_flipped):
         pass
 

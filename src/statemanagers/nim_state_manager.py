@@ -16,8 +16,7 @@ class NIMStateManager(StateManager):
         self.K = nim_k
 
     def get_initial_state(self):
-        '''Return the initial state'''
-        # player_turn = np.random.randint(1, 3)
+        '''Return the initial state.'''
         player_turn = 1
         return [player_turn, self.N]
 

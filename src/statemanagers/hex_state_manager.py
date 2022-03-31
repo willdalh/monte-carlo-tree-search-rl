@@ -172,10 +172,9 @@ class HEXStateManager(StateManager):
 
         Returns:
             The player id of the winner.
-
         '''
         curr_player = state[0]
-        winner = -1 * curr_player
+        winner = -1 * curr_player # Winner is the player who moved to the final state
         return winner
 
     def get_legal_moves(self, state):

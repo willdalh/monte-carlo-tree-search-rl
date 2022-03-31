@@ -190,70 +190,63 @@ class MonteCarloTree:
         Get the visit distribution of all children of the root node. Illegal moves gets a value of 0.
 
         Returns:
-            A list of visit distributions for all moves
+            A list of visit fractions from the root for all moves
         '''
         visit_counts = self.root.Ns
         dist = np.array(visit_counts)/np.sum(visit_counts) # Normalize
         final_dist = np.zeros(len(self.action_space)) # List to be filled with visit distributions of the legal actions
-        moves = [child.origin_action for child in self.root.children] # Serves as indices for the final list
-        for i, move in enumerate(moves):
+        legal_moves = [child.origin_action for child in self.root.children]
+        for i, move in enumerate(legal_moves): # Fill the list with visit distributions of the legal actions
             final_dist[move] = dist[i]
         return final_dist
 
 
     def visualize(self, depth=-2):
         '''
-        Use graphviz to visualize the tree. USed for debugging.
+        Use graphviz to visualize the tree. Used for debugging.
 
         Args:
             depth: Depth of the tree to visualize. -2 means to visualize the entire tree.
-
         '''
         self.nodes_created = 0
-        vis_tree = graphviz.Graph(name='Monte Carlo Tree', filename=f'TREES/monte_carlo_tree_{self.vis_counter}.gv')
-        self.vis_counter += 1
+        vis_tree = graphviz.Graph(name='Monte Carlo Tree', filename=f'TREES/monte_carlo_tree_{self.vis_counter}.gv') 
+        self.vis_counter += 1 # Increment counter to avoid overwriting files in the current session
         self.visualize_node(vis_tree, self.root, parent_node_name=None, edge_label=None, add_text=self.root.N, depth=depth)
         print(f'Nodes visualized: {self.nodes_created}')
         vis_tree.render(view=True)
     
     def visualize_node(self, vis_tree, node, parent_node_name, edge_label, add_text, depth):
+        '''
+        Visualize a node and recursively its children.
+
+        Args:
+            vis_tree: Graphviz graph to add the node to
+            node: Node to visualize
+            parent_node_name: Name of the parent node in the Graphviz graph
+            edge_label: Label of the edge going from the parent node to the node
+            add_text: Additional text to add to the node label
+            depth: Depth of the tree to visualize. -2 means to visualize the entire tree.
+        '''
         if depth == -1:
             return
+
         self.nodes_created += 1
-        name= f'node_{np.random.rand()}'
+        name= f'node_{np.random.rand() + time.time()}' # Unique name for the node
         label = f'{node.state}'
         if add_text != None:
             label = f'{label}\n{add_text}'
             
-        if node.state[0] == 1:
-            vis_tree.node(name=name, label=label, style='filled', color='#000000' if len(node.children) > 0 else '#20bf6b', fillcolor='#ffffff')
+        player = node.state[0]
+        # Visually distinguish between player 1 and player 2 and add green border if the node is a leaf node
+        if player == 1:
+            vis_tree.node(name=name, label=label, style='filled', color='#000000' if len(node.children) > 0 else '#20bf6b', fillcolor='#ffffff') 
         else:
             vis_tree.node(name=name, label=label, style='filled', color='#000000' if len(node.children) > 0 else '#20bf6b', fillcolor='#dddddd')
         if parent_node_name != None:
             vis_tree.edge(tail_name=parent_node_name, head_name=name, label=edge_label)
         
-        
+        # Recursively visualize the children with some data added to the label
         for child, n, e, q, u in zip(node.children, node.Ns, node.Es, node.get_Qs(), node.get_us()):
-            value = q + u if node.state[0] == 1 else q - u
-            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action}', add_text=f'{n}\nE: {e} Q: {q: 0.3f}\nV: {value: 0.3f}', depth=depth-1, state_as_grid=state_as_grid)
+            value = q + u if player == 1 else q - u
+            self.visualize_node(vis_tree, child, parent_node_name=name, edge_label=f'{child.origin_action}', add_text=f'{n}\nE: {e} Q: {q: 0.3f}\nV: {value: 0.3f}', depth=depth-1)
         
-
-class Roller:
-    def __init__(self, sm):
-        self.sm = sm
-    
-    def rollout(self, args):
-        # print(args)
-        agent, leaf = args
-        state = leaf.state
-        while not self.sm.is_final(state): # Rollout to final state
-            curr_player, flipped_state, state_was_flipped = self.sm.flip_state(state)
-            legal_moves = self.sm.get_legal_moves([curr_player, *flipped_state])
-            action = agent.choose_action(flipped_state, legal_moves) 
-            action = self.sm.flip_action(action, state_was_flipped)
-            # print(f'Flipped action: {action}')
-            # sm.render_state([curr_player, *flipped_state])
-            state = self.sm.get_successor(state, action)
-        winner = self.sm.get_winner(state)
-        Z = winner
-        return Z
