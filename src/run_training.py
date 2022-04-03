@@ -31,7 +31,8 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
             agent.anet.save_model(f'{args.log_dir}/models', f'anet_{e}.pt')
         if e == NUM_EPISODES:
             break
-
+        
+        # Restart game and the MCT
         state = sm.get_initial_state()
         mct.set_root(state)
         mct.expand_node(mct.root, sm)
@@ -43,12 +44,12 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
                     sm.render_state(state, frame_delay=args.frame_delay)
             
             # Inner loop for search games
-            if args.search_games > 0:
+            if args.search_games > 0: # Run fixed number of search games
                 for g in range(NUM_SEARCH_GAMES):
                     leaf = mct.tree_search_expand(sm)
                     Z = mct.rollout(agent, sm, leaf)
                     mct.backpropagate(leaf, Z)
-            else:
+            else: # Run search games for fixed time
                 start_time = time.time()
                 search_games = 0
                 while time.time() - start_time < args.search_time:
@@ -103,7 +104,7 @@ def run_training(args, sm: StateManager, mct: MonteCarloTree, agent: Agent):
     toc = time.time()
     print(f'Time used for training: {toc-tic} seconds')
 
-    # Verification
+    # Present loss over episodes and such
     agent.present_results(args.log_dir, args.display)
 
     

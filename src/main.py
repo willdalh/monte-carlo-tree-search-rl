@@ -20,7 +20,7 @@ def main(args):
         if not os.path.isdir('../logs'):
             os.mkdir('../logs')
 
-        not_to_be_deleted = ['../logs/train_log_7x7_good']
+        not_to_be_deleted = ['../logs/train_log_7x7_good'] # Prevent catastrophic deletion...
         if args.log_dir in not_to_be_deleted:
             raise Exception(f'The log directory {args.log_dir.split("/")[-1]} is not allowed to be deleted')
             
@@ -79,13 +79,11 @@ def main(args):
         if len(model_paths) < 2:
             raise FileNotFoundError(f'There are not enough saved models in {args.saved_dir} to run the TOPP')
 
-        
+        # Initialize and run Tournament of Progressive Policies
         topp = TOPP(saved_dir=args.saved_dir, num_duel_games=args.num_duel_games, alternate=args.alternate, best_starts_first=args.best_starts_first, render=args.render, frame_delay=args.frame_delay, game=saved_args.game, model_paths=model_paths, sm=sm, nn_dim=saved_args.nn_dim)
         topp.run()
         topp.present_results()
 
-
-# [i for i in range(N+1) if i%(int(N/(M-1)))==0] N=200, M=5 gives [0, 50, 100, 150, 200]
 
 def str_to_bool(x):
     '''Convert string to boolean'''
@@ -162,6 +160,7 @@ python main.py --hex_k 7 episodes 1000 --search_time 4 --search_games 0 --lr 0.0
 
 FOR DEMO:
 python main.py --episodes 100 --hex_k 3 --lr 0.0007 --search_time 1 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,100,relu'
-
 python main.py --log_dir train_log_demo --episodes 40 --hex_k 4 --lr 0.002 --search_time 0.3 --search_games 0 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,64,relu' --num_anet_saves 6
+
+python main.py --log_dir train_log_demo --episodes 40 --hex_k 4 --lr 0.003 --search_time 0.3 --search_games 0 --batch_size 24 --epsilon_decay 0.99 --nn_dim 'conv(c8),relu,conv(c6),relu,64,relu' --num_anet_saves 10
 '''

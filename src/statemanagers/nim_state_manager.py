@@ -110,7 +110,7 @@ class NIMStateManager(StateManager):
         '''No symmetric cases.'''
         return [] # No way to create additional cases
 
-    def render_state(self, state):
+    def render_state(self, state, **_):
         '''Render the given state.'''
         print(f'State is {state}')
     

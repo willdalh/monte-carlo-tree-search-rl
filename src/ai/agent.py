@@ -29,7 +29,7 @@ class Agent:
             pre_trained_path: Path to a pre-trained model. If given, this model will be loaded.
             state_size: The size of the state when excluding the player id.
             action_space_size: The size of the action space.
-            _: Unused keyword arguments.
+            **_: Unused keyword arguments.
         '''
 
         self.batch_size = batch_size
@@ -48,7 +48,7 @@ class Agent:
         self.exploits_done = 0
         self.min_epsilon = 0.01
 
-        self.demonstrate_epsilon()
+        # self.demonstrate_epsilon()
         
 
     def train_on_buffer_batch(self, epochs=10, debug=False):
@@ -70,12 +70,6 @@ class Agent:
  
         mean_loss = np.mean(losses)
         self.cross_losses.append(mean_loss)
-
-        # with torch.no_grad():
-        #     logging.debug('')
-        #     logging.debug(f'state: {states[0]}')
-        #     logging.debug(f'pred dist: {F.softmax(prediction[0], dim=0)}')
-        #     logging.debug(f'tar: {targets[0]}')
         
         return mean_loss
 
@@ -160,7 +154,6 @@ class Agent:
         logging.debug(f'Replay histogram:\n{self.buffer.get_histogram()}')
         logging.debug(f'Accuracy on replay buffer is: {self.get_accuracy_on_buffer()}')
         
-        # print('\nLength of buffer:', len(self.buffer.buffer))
         plt.plot(np.arange(len(self.cross_losses)), np.array(self.cross_losses))
         plt.title('Cross-entropy loss on replay buffer samples')
         plt.savefig(f'{log_dir}/cross_loss.png', dpi=300)

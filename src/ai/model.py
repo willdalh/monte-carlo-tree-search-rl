@@ -8,8 +8,15 @@ import numpy as np
 import logging
 
 class Model(nn.Module):
-    '''Neural network'''
     def __init__(self, nn_dim, optimizer_name, lr):
+        '''
+        Initialize the neural network. 
+
+        Args:
+            nn_dim: list of strings and ints specifying the structure of the neural network. If convolutional layers are used, they must be specified before all linear layers.
+            optimizer_name: name of the optimizer to use.
+            lr: learning rate for the optimizer.
+        '''
         super(Model, self).__init__()
         self.nn_dim = nn_dim
         self.lr = lr
@@ -22,7 +29,6 @@ class Model(nn.Module):
                 raise ValueError('First element specified in nn_dim must be an integer')
             layers = Model.generate_layers(nn_dim)
 
-        logging.debug(nn_dim)
         logging.debug('\n')
         logging.debug('Constructed the following layers:')
         [logging.debug(e[-1]) for e in layers]
@@ -31,7 +37,7 @@ class Model(nn.Module):
         od = OrderedDict(layers)
         self.net = nn.Sequential(od)
 
-        # Test network
+        # Test network to check if shapes are correct
         input_features = self.nn_dim[0]
         test_tensor = torch.rand(10, input_features)
         print('Testing network')
@@ -41,12 +47,11 @@ class Model(nn.Module):
         self.optimizer = None
         self.initialize_optimizer(optimizer_name)
         self.loss_fn = nn.CrossEntropyLoss()
-        # self.loss_fn = nn.MSELoss()
         
 
     def forward(self, x):
         '''
-        Forward pass of the neural network with softmax applied to the output
+        Forward pass of the neural network with softmax applied to the output.
         
         Args:
             x: tensor of shape (batch_size, size of state excluding the player id)
@@ -204,7 +209,7 @@ class Model(nn.Module):
 
         # Add convolutional layers
         for i, elem in enumerate(nn_dim):
-            if elem == 'unflatten':
+            if elem == 'unflatten': # Add layer for unflattening input vector in preparation for conv layers
                 layers.append(('unflatten_start', nn.Unflatten(1, (1, height_width, height_width))))
                 layers_test.append(f'unflatten(1-{height_width}-{height_width})')
 
@@ -218,13 +223,13 @@ class Model(nn.Module):
 
                 # Find in-channels
                 in_channels = 1 # Input board will have only one channel
-                if len(layers) > 1: 
+                if len(layers) > 1: # If conv layer have been added, set input channels to the same as output channels for the previous layer
                     in_channels = layers[-1][-1].out_channels
 
                 layers.append((f'conv{i}', nn.Conv2d(in_channels=in_channels, out_channels=conv_args['c'], kernel_size=conv_args['k'], stride=conv_args['s'], padding=conv_args['p'])))
                 layers_test.append(elem)
 
-            if  elem == 'flatten':
+            if  elem == 'flatten': # Add layer for flattening output from conv in preparation for linear layer
                 flattened_size = int(height_width ** 2) * layers[-1][-1].out_channels
                 layers.append((f'flatten_end', nn.Flatten(1, 3)))
                 layers_test.append(f'flatten({flattened_size})')
